@@ -77,6 +77,22 @@ const tools = [
     },
   },
   {
+    name: "list_wallet_suggestions",
+    description: "Discover potentially-forgotten wallets the user owns. Analyzes counterparties across the user's known transactions and ranks addresses that look like other wallets they control (bidirectional flow, multi-chain presence, repeated interaction). Each suggestion includes a confidence score and human-readable reasons. Surface high-score suggestions to the user — adding a forgotten wallet usually unblocks dozens of missing-basis problems.",
+    inputSchema: {
+      type: "object",
+      properties: { limit: { type: "integer", minimum: 1, maximum: 200 } },
+    },
+  },
+  {
+    name: "list_transfer_pair_candidates",
+    description: "Find unclassified transactions that look like self-transfers between two of the user's already-known wallets (matching token + amount + close timestamp). Use propose_transfer_pair on high-confidence pairs to clean up double-counted disposals.",
+    inputSchema: {
+      type: "object",
+      properties: { limit: { type: "integer", minimum: 1, maximum: 500 } },
+    },
+  },
+  {
     name: "propose_cost_basis",
     description: "Propose a cost basis (USD) for a specific transaction. Requires evidence (URL or notes). The proposal is queued for the user to approve.",
     inputSchema: {
@@ -184,6 +200,16 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       case "list_missing_basis": {
         const q = a.limit ? `?limit=${a.limit}` : "";
         return respond(await api(`/api/transactions/missing-basis${q}`));
+      }
+
+      case "list_wallet_suggestions": {
+        const q = a.limit ? `?limit=${a.limit}` : "";
+        return respond(await api(`/api/wallets/suggestions${q}`));
+      }
+
+      case "list_transfer_pair_candidates": {
+        const q = a.limit ? `?limit=${a.limit}` : "";
+        return respond(await api(`/api/transactions/transfer-pair-candidates${q}`));
       }
 
       case "propose_cost_basis":

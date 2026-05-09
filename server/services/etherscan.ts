@@ -107,7 +107,9 @@ export async function fetchTransactionsViaEtherscan(
       methodName?: string;
       from?: string;
       to?: string;
+      counterparty?: string;
     };
+    const NULL_ADDR = "0x0000000000000000000000000000000000000000";
     const map = new Map<string, Acc>();
 
     for (const tx of normal) {
@@ -125,6 +127,11 @@ export async function fetchTransactionsViaEtherscan(
       acc.to = tx.to;
       acc.contractAddress = tx.contractAddress || acc.contractAddress;
       acc.methodName = tx.functionName?.split("(")[0] || acc.methodName;
+      // Counterparty: the side that isn't us. Skip null/contract-creation.
+      const fromLc = tx.from?.toLowerCase();
+      const toLc = tx.to?.toLowerCase();
+      const cp = fromLc === addr ? toLc : toLc === addr ? fromLc : null;
+      if (cp && cp !== NULL_ADDR && cp !== "") acc.counterparty = acc.counterparty || cp;
       // Native value movement
       if (value !== "0") {
         const native = { address: "native", symbol: chain === "polygon" ? "MATIC" : chain === "bsc" ? "BNB" : chain === "avalanche" ? "AVAX" : "ETH", amount: fromWei(value, 18) };
@@ -151,8 +158,12 @@ export async function fetchTransactionsViaEtherscan(
       acc.contractAddress = tx.contractAddress || acc.contractAddress;
       const decimals = parseInt(tx.tokenDecimal, 10) || 18;
       const movement = { address: tx.contractAddress, symbol: tx.tokenSymbol, amount: fromWei(tx.value, decimals) };
-      if (tx.from.toLowerCase() === addr) acc.tokenOut = movement;
-      if (tx.to.toLowerCase() === addr) acc.tokenIn = movement;
+      const fromLc = tx.from.toLowerCase();
+      const toLc = tx.to.toLowerCase();
+      if (fromLc === addr) acc.tokenOut = movement;
+      if (toLc === addr) acc.tokenIn = movement;
+      const cp = fromLc === addr ? toLc : toLc === addr ? fromLc : null;
+      if (cp && cp !== NULL_ADDR) acc.counterparty = acc.counterparty || cp;
       map.set(hash, acc);
     }
 
@@ -173,6 +184,7 @@ export async function fetchTransactionsViaEtherscan(
       needsReview: true,
       contractAddress: acc.contractAddress || null,
       methodName: acc.methodName || null,
+      counterpartyAddress: acc.counterparty || null,
       gasFee: acc.gasFeeEth || null,
     }) as InsertTransaction);
 

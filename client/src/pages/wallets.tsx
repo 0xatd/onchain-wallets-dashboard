@@ -32,14 +32,18 @@ import { AddressDisplay } from "@/components/address-display";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  PlusCircle, 
-  Wallet, 
+import {
+  PlusCircle,
+  Wallet,
   MoreVertical,
   Trash2,
   RefreshCw,
   ArrowLeftRight,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  Eye,
+  X,
+  ExternalLink
 } from "lucide-react";
 import type { Wallet as WalletType } from "@shared/schema";
 import { SUPPORTED_CHAINS } from "@shared/schema";
@@ -393,6 +397,91 @@ export default function Wallets() {
           </CardContent>
         </Card>
       )}
+
+      <SuggestedWallets onAdd={(s) => {
+        form.reset({ address: s.address, chain: s.chains[0] || "ethereum", label: "", entityType: "personal" });
+        setIsAddDialogOpen(true);
+      }} />
     </div>
+  );
+}
+
+// ---------- Suggested wallets ----------
+
+type WalletSuggestion = {
+  address: string;
+  chains: string[];
+  txCount: number;
+  sentToCount: number;
+  receivedFromCount: number;
+  totalValueUsd: number;
+  firstSeen: string;
+  lastSeen: string;
+  bidirectional: boolean;
+  score: number;
+  reasons: string[];
+  sampleTxIds: string[];
+};
+
+function SuggestedWallets({ onAdd }: { onAdd: (s: WalletSuggestion) => void }) {
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery<WalletSuggestion[]>({ queryKey: ["/api/wallets/suggestions"] });
+
+  const dismissMutation = useMutation({
+    mutationFn: async (address: string) => apiRequest("POST", `/api/wallets/suggestions/${address}/dismiss`, { reason: "user_dismissed" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wallets/suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/work"] });
+      toast({ title: "Dismissed", description: "We won't suggest this address again." });
+    },
+  });
+
+  const suggestions = data || [];
+  if (isLoading || suggestions.length === 0) return null;
+
+  return (
+    <Card className="border-blue-500/30 bg-blue-50/40 dark:bg-blue-950/10" data-testid="card-suggested-wallets">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-blue-500" />
+          Wallets you might have forgotten
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Counterparty addresses with patterns that suggest you might own them — bidirectional flow, repeated interactions, multi-chain presence.
+          Adding a forgotten wallet usually unlocks a stack of missing-basis problems at once.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {suggestions.map(s => (
+          <div key={s.address} className="rounded-lg bg-background border p-4" data-testid={`suggestion-${s.address}`}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <code className="text-sm font-mono break-all">{s.address}</code>
+                  <Badge variant="outline" className="text-xs">
+                    {Math.round(s.score * 100)}% confidence
+                  </Badge>
+                  {s.bidirectional && <Badge variant="outline" className="text-xs">bidirectional</Badge>}
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {s.chains.map(c => <ChainBadge key={c} chain={c} />)}
+                </div>
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {s.reasons.map((r, i) => <li key={i}>· {r}</li>)}
+                </ul>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => onAdd(s)} data-testid={`button-add-${s.address}`}>
+                  <PlusCircle className="h-3 w-3 mr-1" /> Add
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => dismissMutation.mutate(s.address)} data-testid={`button-dismiss-${s.address}`}>
+                  <X className="h-3 w-3 mr-1" /> Not mine
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }

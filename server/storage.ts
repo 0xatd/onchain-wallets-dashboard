@@ -11,6 +11,7 @@ import {
   proposals,
   auditLog,
   apiTokens,
+  dismissedWallets,
   type InsertWallet,
   type Wallet,
   type InsertTransaction,
@@ -107,14 +108,26 @@ export interface IStorage {
   revokeApiToken(id: string, userId: string): Promise<void>;
   touchApiToken(id: string): Promise<void>;
 
+  // Dismissed wallets (suggestions the user said "not mine" to)
+  listDismissedWallets(userId: string): Promise<string[]>;
+  addDismissedWallet(userId: string, address: string, reason?: string): Promise<void>;
+
+  // Wallet discovery
+  getWalletSuggestions(userId: string, limit?: number): Promise<any[]>;
+  getTransferPairCandidates(userId: string, limit?: number): Promise<any[]>;
+
   // Agent work queue
   getAgentWork(userId: string): Promise<{
     missingBasisCount: number;
     needsReviewCount: number;
     pendingProposalsCount: number;
+    walletSuggestionsCount: number;
+    transferPairCandidatesCount: number;
     missingBasis: Transaction[];
     needsReview: Transaction[];
     pendingProposals: Proposal[];
+    walletSuggestions: any[];
+    transferPairCandidates: any[];
   }>;
 
   // Reports
@@ -726,19 +739,63 @@ export class DatabaseStorage implements IStorage {
       .where(eq(apiTokens.id, id));
   }
 
+  // ---------- Dismissed wallets ----------
+  async listDismissedWallets(userId: string): Promise<string[]> {
+    const rows = await db.select({ address: dismissedWallets.address })
+      .from(dismissedWallets)
+      .where(eq(dismissedWallets.userId, userId));
+    return rows.map(r => r.address.toLowerCase());
+  }
+
+  async addDismissedWallet(userId: string, address: string, reason?: string): Promise<void> {
+    await db.insert(dismissedWallets).values({
+      userId,
+      address: address.toLowerCase(),
+      reason: reason || null,
+    });
+  }
+
   // ---------- Agent work queue ----------
   async getAgentWork(userId: string) {
-    const missingBasis = await this.getTransactionsMissingBasis(userId, 50);
-    const needsReview = await this.getTransactions({ userId, needsReview: true });
-    const pendingProposals = await this.listProposals(userId, "pending");
+    const [missingBasis, needsReview, pendingProposals, walletSuggestions, transferPairCandidates] = await Promise.all([
+      this.getTransactionsMissingBasis(userId, 50),
+      this.getTransactions({ userId, needsReview: true }),
+      this.listProposals(userId, "pending"),
+      this.getWalletSuggestions(userId, 25),
+      this.getTransferPairCandidates(userId, 25),
+    ]);
     return {
       missingBasisCount: missingBasis.length,
       needsReviewCount: needsReview.length,
       pendingProposalsCount: pendingProposals.length,
+      walletSuggestionsCount: walletSuggestions.length,
+      transferPairCandidatesCount: transferPairCandidates.length,
       missingBasis: missingBasis.slice(0, 25),
       needsReview: needsReview.slice(0, 25),
       pendingProposals: pendingProposals.slice(0, 25),
+      walletSuggestions,
+      transferPairCandidates,
     };
+  }
+
+  // ---------- Wallet discovery ----------
+  async getWalletSuggestions(userId: string, limit = 25) {
+    const { suggestWallets } = await import("./services/walletSuggestions");
+    const [txs, ws, dismissed] = await Promise.all([
+      this.getTransactions({ userId }),
+      this.getWallets(userId),
+      this.listDismissedWallets(userId),
+    ]);
+    const dismissedSet = new Set(dismissed);
+    return suggestWallets(txs, ws)
+      .filter(s => !dismissedSet.has(s.address))
+      .slice(0, limit);
+  }
+
+  async getTransferPairCandidates(userId: string, limit = 25) {
+    const { findTransferPairCandidates } = await import("./services/walletSuggestions");
+    const txs = await this.getTransactions({ userId });
+    return findTransferPairCandidates(txs).slice(0, limit);
   }
 }
 

@@ -8,6 +8,7 @@ Connect your wallets, fix the missing-cost-basis problem, and hand a clean, stru
 
 - 🪙 **Aggregate** wallets across Ethereum, Bitcoin, Solana, Polygon, Arbitrum, Optimism, Base, Avalanche, BSC.
 - 🔎 **Find** every disposal where cost basis is unknown — the headline workflow.
+- 🕵️ **Discover forgotten wallets** by analyzing counterparties across your existing transactions. Bidirectional flow + multi-chain presence + repeated interaction = a wallet you probably own and forgot. Adding one usually unlocks a stack of missing-basis problems at once.
 - 🤖 **Agent-native**: an MCP server + REST API + JSON export. Claude proposes fixes; you approve in-app.
 - 🧾 **Tax-ready**: Form 8949, Schedule D, income reports, plus a structured JSON export your accountant or LLM can parse.
 - 🔒 **Self-hosted**: read-only wallet tracking. Your keys never leave your wallet. MIT-licensed.
@@ -135,7 +136,7 @@ mcp/           Standalone MCP server that wraps the HTTP API
 
 ## Status
 
-Working today: wallet aggregation (Alchemy + **Etherscan V2 fallback**), transaction sync, classification + custom rules, **FIFO/LIFO/HIFO/specific-ID** cost-basis matching, Form 8949/Schedule D CSV exports, **agent proposal workflow + audit log**, **MCP server**, **JSON export**, **OpenAPI spec**, **local-auth mode**, **generic CSV importer** (Coinbase/Kraken/Binance/Robinhood-shaped), **Vitest** tests for the math-critical pieces.
+Working today: wallet aggregation (Alchemy + **Etherscan V2 fallback**), transaction sync, classification + custom rules, **FIFO/LIFO/HIFO/specific-ID** cost-basis matching, Form 8949/Schedule D CSV exports, **agent proposal workflow + audit log**, **MCP server**, **JSON export**, **OpenAPI spec**, **local-auth mode**, **generic CSV importer** (Coinbase/Kraken/Binance/Robinhood-shaped), **forgotten-wallet discovery + transfer-pair candidate detection**, **Vitest** tests for the math-critical pieces.
 
 Planned (PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)):
 - Wash-sale detection

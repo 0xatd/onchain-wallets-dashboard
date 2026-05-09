@@ -243,6 +243,52 @@ export function registerAgentRoutes(app: Express) {
     }
   });
 
+  // ---------- Wallet discovery ----------
+  app.get("/api/wallets/suggestions", isAuthenticated, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt((req.query.limit as string) || "25", 10), 200);
+      const suggestions = await storage.getWalletSuggestions(getUserId(req), limit);
+      res.json(suggestions);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to compute wallet suggestions" });
+    }
+  });
+
+  app.post("/api/wallets/suggestions/:address/dismiss", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const address = (req.params.address as string).toLowerCase();
+      const reason = typeof req.body?.reason === "string" ? req.body.reason : undefined;
+      await storage.addDismissedWallet(userId, address, reason);
+      await storage.appendAudit({
+        userId,
+        actor: `user:${userId}`,
+        action: "dismiss_wallet_suggestion",
+        targetType: "address",
+        targetId: address,
+        before: null,
+        after: { reason } as any,
+        metadata: null,
+      });
+      res.status(204).send();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to dismiss suggestion" });
+    }
+  });
+
+  app.get("/api/transactions/transfer-pair-candidates", isAuthenticated, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt((req.query.limit as string) || "50", 10), 500);
+      const pairs = await storage.getTransferPairCandidates(getUserId(req), limit);
+      res.json(pairs);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to compute transfer-pair candidates" });
+    }
+  });
+
   // Missing-cost-basis endpoint — the headline workflow.
   app.get("/api/transactions/missing-basis", isAuthenticated, async (req, res) => {
     try {

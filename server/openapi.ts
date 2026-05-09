@@ -109,6 +109,26 @@ export const openApiSpec = {
     "/api/transactions/missing-basis": {
       get: { summary: "Transactions where cost basis is unknown", responses: { "200": { description: "OK" } } },
     },
+    "/api/wallets/suggestions": {
+      get: {
+        summary: "Discover potentially-forgotten wallets",
+        description: "Analyzes counterparty addresses across the user's known transactions and ranks ones that look like wallets the user owns (bidirectional flow, multi-chain, repeated interaction). Each result has a 0..1 confidence score and human-readable reasons.",
+        responses: { "200": { description: "Suggestions" } },
+      },
+    },
+    "/api/wallets/suggestions/{address}/dismiss": {
+      post: {
+        summary: "Mark an address as not-yours so we stop suggesting it",
+        parameters: [{ name: "address", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "204": { description: "Dismissed" } },
+      },
+    },
+    "/api/transactions/transfer-pair-candidates": {
+      get: {
+        summary: "Unclassified transactions that look like self-transfers between two known wallets",
+        responses: { "200": { description: "OK" } },
+      },
+    },
     "/api/export/json": {
       get: { summary: "Full structured export — wallets, transactions, lots, disposals, settings", responses: { "200": { description: "OK" } } },
     },

@@ -312,6 +312,23 @@ export async function fetchTransactions(
       // Find contract address from transfers
       const contractAddr = tx.transfers.find((t: any) => t.rawContract?.address)?.rawContract?.address || null;
 
+      // Counterparty: the non-self EOA on the other side. Skip if it's a known
+      // router or the null address — we only want addresses worth investigating
+      // as potentially-yours wallets.
+      const wAddr = walletAddress.toLowerCase();
+      const counterparty = (() => {
+        for (const t of tx.transfers as any[]) {
+          const from = t.from?.toLowerCase();
+          const to = t.to?.toLowerCase();
+          const other = from === wAddr ? to : to === wAddr ? from : null;
+          if (!other) continue;
+          if (other === NULL_ADDRESS) continue;
+          if (KNOWN_DEX_ROUTERS.has(other)) continue;
+          return other;
+        }
+        return null;
+      })();
+
       // Calculate approximate USD value (simplified)
       const totalValue = tx.transfers.reduce((sum: number, t: any) => sum + (t.value || 0), 0);
       
@@ -333,6 +350,7 @@ export async function fetchTransactions(
         userClassified: false,
         contractAddress: contractAddr,
         methodName: null,
+        counterpartyAddress: counterparty,
         gasFee: null,
         gasFeeUsd: null,
         priceAtTime: null,

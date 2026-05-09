@@ -99,6 +99,11 @@ export const transactions = pgTable("transactions", {
   // Contract interaction
   contractAddress: text("contract_address"),
   methodName: text("method_name"),
+
+  // Counterparty (the other EOA on the other side of a transfer, when known).
+  // Used for "forgotten wallet" discovery. Null for swaps/contract calls
+  // where the counterparty is just a router/protocol.
+  counterpartyAddress: text("counterparty_address"),
   
   // Fees
   gasFee: decimal("gas_fee", { precision: 38, scale: 18 }),
@@ -259,6 +264,18 @@ export const insertTelegramLinkSchema = createInsertSchema(telegramLinks).omit({
 
 export type InsertTelegramLink = z.infer<typeof insertTelegramLinkSchema>;
 export type TelegramLink = typeof telegramLinks.$inferSelect;
+
+// Wallets the user has explicitly dismissed as "not mine" so we stop
+// re-suggesting them. Keyed by lowercase address.
+export const dismissedWallets = pgTable("dismissed_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  address: text("address").notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type DismissedWallet = typeof dismissedWallets.$inferSelect;
 
 // Agent / human proposals — every agent write goes through this approval workflow.
 export const PROPOSAL_ACTIONS = [
