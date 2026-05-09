@@ -3,23 +3,34 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
-// Local-auth mode: when AUTH_MODE=local (or no Firebase env is set), we skip
-// Firebase entirely and treat every request as the LOCAL_USER_ID. This makes
-// the project trivially self-hostable without Google Cloud setup.
-const AUTH_MODE = (process.env.AUTH_MODE || "").toLowerCase();
+// Local-auth mode is an explicit development-only opt-in. Production must
+// fail closed when Firebase is not configured instead of silently becoming a
+// single-user local install.
+const AUTH_MODE = (process.env.AUTH_MODE || "firebase").toLowerCase();
 const LOCAL_USER_ID = process.env.LOCAL_USER_ID || "local-user";
 const LOCAL_USER_EMAIL = process.env.LOCAL_USER_EMAIL || "you@localhost";
+const isProduction = process.env.NODE_ENV === "production";
 
 const firebaseAvailable =
   !!process.env.FIREBASE_SERVICE_ACCOUNT ||
   !!process.env.FIREBASE_PROJECT_ID ||
   !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-const useLocalAuth = AUTH_MODE === "local" || (!firebaseAvailable && AUTH_MODE !== "firebase");
+const useLocalAuth = AUTH_MODE === "local" && !isProduction;
+
+function assertAuthConfiguration() {
+  if (AUTH_MODE === "local" && isProduction) {
+    throw new Error("AUTH_MODE=local is not allowed in production. Configure Firebase auth instead.");
+  }
+  if (!useLocalAuth && !firebaseAvailable) {
+    throw new Error("Firebase auth is not configured. Set FIREBASE_SERVICE_ACCOUNT, FIREBASE_PROJECT_ID, or GOOGLE_APPLICATION_CREDENTIALS; for local development set AUTH_MODE=local explicitly.");
+  }
+}
 
 let firebaseAuth: { verifyIdToken: (t: string) => Promise<any> } | null = null;
 
 async function initFirebaseAdmin() {
+  assertAuthConfiguration();
   if (useLocalAuth) return null;
   if (firebaseAuth) return firebaseAuth;
   const { initializeApp, cert, getApps } = await import("firebase-admin/app");
@@ -80,6 +91,7 @@ declare global {
 }
 
 export async function setupAuth(app: Express) {
+  assertAuthConfiguration();
   app.set("trust proxy", 1);
   app.use(getSession());
 
@@ -154,7 +166,12 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       const { storage } = await import("../storage");
       const token = await storage.getApiTokenByHash(hashApiToken(idToken));
       if (!token) return res.status(401).json({ message: "Invalid API token" });
+      if (token.expiresAt && token.expiresAt < new Date()) {
+        return res.status(401).json({ message: "Expired API token" });
+      }
+      req.apiToken = token;
       req.user = { uid: token.userId, claims: { sub: token.userId } };
+      storage.touchApiToken(token.id).catch(() => {});
       return next();
     }
 

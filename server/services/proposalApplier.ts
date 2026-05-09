@@ -111,15 +111,40 @@ export async function applyProposal(p: Proposal): Promise<{ ok: true; result: an
       }
 
       case "create_tax_lot": {
+        const walletId = String(payload.wallet_id || "");
+        if (!walletId) throw new ProposalApplyError("payload.wallet_id required");
+        const wallet = await storage.getWallet(walletId, p.userId);
+        if (!wallet) throw new ProposalApplyError("Wallet not found or not owned by user");
+
+        const transactionId = payload.transaction_id ? String(payload.transaction_id) : undefined;
+        if (transactionId) {
+          const tx = await storage.getTransaction(transactionId, p.userId);
+          if (!tx) throw new ProposalApplyError("Transaction not found or not owned by user");
+          if (tx.walletId !== walletId) throw new ProposalApplyError("Transaction does not belong to payload.wallet_id");
+        }
+
+        for (const field of ["token", "token_symbol", "amount", "cost_basis_usd", "acquired_at"]) {
+          if (payload[field] === undefined || payload[field] === null || payload[field] === "") {
+            throw new ProposalApplyError(`payload.${field} required`);
+          }
+        }
+        const acquiredAt = new Date(payload.acquired_at);
+        if (Number.isNaN(acquiredAt.getTime())) throw new ProposalApplyError("payload.acquired_at must be a valid date");
+
         const lot = await storage.createTaxLot({
-          walletId: payload.wallet_id,
-          transactionId: payload.transaction_id,
+          walletId,
+          transactionId,
           token: payload.token,
           tokenSymbol: payload.token_symbol,
           amount: String(payload.amount),
           remainingAmount: String(payload.remaining_amount ?? payload.amount),
           costBasisUsd: String(payload.cost_basis_usd),
-          acquiredAt: new Date(payload.acquired_at),
+          acquiredAt,
+          basisSource: payload.source ?? p.actor,
+          basisEvidenceUrl: payload.evidence_url ?? p.evidenceUrl ?? undefined,
+          basisSetBy: p.actor,
+          basisSetAt: new Date(),
+          basisNotes: payload.notes ?? p.reasoning ?? undefined,
         } as any);
         await storage.appendAudit({
           userId: p.userId,
