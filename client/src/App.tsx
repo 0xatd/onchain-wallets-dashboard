@@ -26,6 +26,7 @@ import Review from "@/pages/review";
 import Rules from "@/pages/rules";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import Proposals from "@/pages/proposals";
 import LandingPage from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/wallets" component={Wallets} />
       <Route path="/transactions" component={Transactions} />
       <Route path="/review" component={Review} />
+      <Route path="/proposals" component={Proposals} />
       <Route path="/rules" component={Rules} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />

@@ -1,44 +1,72 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { initializeApp, getApps } from "firebase/app";
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider,
-  signOut,
-  type User as FirebaseUser
-} from "firebase/auth";
 import { useEffect, useState } from "react";
 
-// Firebase config from environment variables
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+// VITE_AUTH_MODE=local skips Firebase entirely. The server side must also be
+// in local mode (AUTH_MODE=local). This is the easiest path to self-host.
+const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE || "").toLowerCase();
+const FIREBASE_CONFIGURED = !!import.meta.env.VITE_FIREBASE_API_KEY;
+const USE_LOCAL = AUTH_MODE === "local" || !FIREBASE_CONFIGURED;
+
+type FirebaseUserShape = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  getIdToken(): Promise<string>;
+} | null;
+
+type FirebaseModule = {
+  auth: any;
+  googleProvider: any;
+  signInWithPopup: any;
+  signOut: any;
+  onAuthStateChanged: any;
 };
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+let firebaseModule: FirebaseModule | null = null;
+let firebaseInitPromise: Promise<FirebaseModule | null> | null = null;
 
-// Helper to get ID token for API requests
+async function getFirebase(): Promise<FirebaseModule | null> {
+  if (USE_LOCAL) return null;
+  if (firebaseModule) return firebaseModule;
+  if (firebaseInitPromise) return firebaseInitPromise;
+  firebaseInitPromise = (async () => {
+    const { initializeApp, getApps } = await import("firebase/app");
+    const fbAuth = await import("firebase/auth");
+    const config = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    };
+    const app = getApps().length === 0 ? initializeApp(config) : getApps()[0];
+    const auth = fbAuth.getAuth(app);
+    const googleProvider = new fbAuth.GoogleAuthProvider();
+    firebaseModule = {
+      auth,
+      googleProvider,
+      signInWithPopup: fbAuth.signInWithPopup,
+      signOut: fbAuth.signOut,
+      onAuthStateChanged: fbAuth.onAuthStateChanged,
+    };
+    return firebaseModule;
+  })();
+  return firebaseInitPromise;
+}
+
 export async function getIdToken(): Promise<string | null> {
-  const user = auth.currentUser;
+  if (USE_LOCAL) return "local"; // server ignores in local-auth mode
+  const fb = await getFirebase();
+  const user = fb?.auth.currentUser;
   if (!user) return null;
   return user.getIdToken();
 }
 
-// Helper for authenticated API requests
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = await getIdToken();
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-  
+  if (!token) throw new Error("Not authenticated");
   return fetch(url, {
     ...options,
     headers: {
@@ -50,35 +78,45 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<FirebaseUserShape>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    if (USE_LOCAL) {
+      setUser({
+        uid: "local-user",
+        email: "you@localhost",
+        displayName: "Local User",
+        photoURL: null,
+        getIdToken: async () => "local",
+      });
       setIsLoading(false);
-    });
-    return unsubscribe;
+      return;
+    }
+    let unsubscribe: (() => void) | undefined;
+    getFirebase().then((fb) => {
+      if (!fb) { setIsLoading(false); return; }
+      unsubscribe = fb.onAuthStateChanged(fb.auth, (firebaseUser: any) => {
+        setUser(firebaseUser);
+        setIsLoading(false);
+      });
+    }).catch(() => setIsLoading(false));
+    return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
   const loginWithGoogle = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
+    if (USE_LOCAL) return;
+    const fb = await getFirebase();
+    if (!fb) throw new Error("Firebase not configured");
+    await fb.signInWithPopup(fb.auth, fb.googleProvider);
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-      queryClient.clear();
-    } catch (error) {
-      console.error("Logout error:", error);
-      throw error;
-    }
+    if (USE_LOCAL) return;
+    const fb = await getFirebase();
+    if (fb) await fb.signOut(fb.auth);
+    queryClient.clear();
   };
 
   return {
@@ -92,6 +130,7 @@ export function useAuth() {
     firebaseUser: user,
     isLoading,
     isAuthenticated: !!user,
+    isLocalMode: USE_LOCAL,
     loginWithGoogle,
     logout,
   };

@@ -1,4 +1,4 @@
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, or, sql, inArray, isNull } from "drizzle-orm";
 import { db } from "./db";
 import {
   wallets,
@@ -8,6 +8,9 @@ import {
   disposals,
   settings,
   telegramLinks,
+  proposals,
+  auditLog,
+  apiTokens,
   type InsertWallet,
   type Wallet,
   type InsertTransaction,
@@ -23,6 +26,10 @@ import {
   type DashboardStats,
   type InsertTelegramLink,
   type TelegramLink,
+  type Proposal,
+  type InsertProposal,
+  type AuditLogEntry,
+  type ApiToken,
 } from "../shared/schema";
 
 export interface IStorage {
@@ -76,6 +83,37 @@ export interface IStorage {
 
   // Dashboard
   getDashboardStats(userId: string): Promise<DashboardStats>;
+
+  // Missing cost basis — disposals or transactions where basis is unknown.
+  getTransactionsMissingBasis(userId: string, limit?: number): Promise<Transaction[]>;
+
+  // Proposals
+  createProposal(p: InsertProposal): Promise<Proposal>;
+  getProposal(id: string, userId: string): Promise<Proposal | undefined>;
+  getProposalByIdempotencyKey(userId: string, key: string): Promise<Proposal | undefined>;
+  listProposals(userId: string, status?: string): Promise<Proposal[]>;
+  updateProposalStatus(id: string, userId: string, patch: Partial<Proposal>): Promise<Proposal | undefined>;
+
+  // Audit log
+  appendAudit(entry: Omit<AuditLogEntry, "id" | "createdAt">): Promise<AuditLogEntry>;
+  listAudit(userId: string, limit?: number): Promise<AuditLogEntry[]>;
+
+  // API tokens
+  createApiToken(userId: string, name: string, tokenHash: string, tokenPrefix: string, scopes: string[], opts?: { autoApprove?: boolean; autoApproveThreshold?: string; expiresAt?: Date }): Promise<ApiToken>;
+  getApiTokenByHash(tokenHash: string): Promise<ApiToken | undefined>;
+  listApiTokens(userId: string): Promise<ApiToken[]>;
+  revokeApiToken(id: string, userId: string): Promise<void>;
+  touchApiToken(id: string): Promise<void>;
+
+  // Agent work queue
+  getAgentWork(userId: string): Promise<{
+    missingBasisCount: number;
+    needsReviewCount: number;
+    pendingProposalsCount: number;
+    missingBasis: Transaction[];
+    needsReview: Transaction[];
+    pendingProposals: Proposal[];
+  }>;
 
   // Reports
   getReportSummary(year: number, userId: string): Promise<{
@@ -555,6 +593,135 @@ export class DatabaseStorage implements IStorage {
       totalIncome: totalIncome.toFixed(2),
       needsReviewCount: Number(reviewCount.count),
       disposals: yearDisposals,
+    };
+  }
+
+  // ---------- Missing cost basis ----------
+  async getTransactionsMissingBasis(userId: string, limit = 100): Promise<Transaction[]> {
+    const userWallets = await db.select({ id: wallets.id })
+      .from(wallets)
+      .where(eq(wallets.userId, userId));
+    const walletIds = userWallets.map(w => w.id);
+    if (walletIds.length === 0) return [];
+
+    // Disposals (token_out present) without a USD value AND without an explicit basis source.
+    return await db.select()
+      .from(transactions)
+      .where(and(
+        inArray(transactions.walletId, walletIds),
+        sql`${transactions.tokenOut} IS NOT NULL`,
+        or(isNull(transactions.valueUsd), eq(transactions.valueUsd, sql`0`)),
+        isNull(transactions.basisSource),
+      ))
+      .orderBy(desc(transactions.timestamp))
+      .limit(limit);
+  }
+
+  // ---------- Proposals ----------
+  async createProposal(p: InsertProposal): Promise<Proposal> {
+    const [row] = await db.insert(proposals).values(p).returning();
+    return row;
+  }
+
+  async getProposal(id: string, userId: string): Promise<Proposal | undefined> {
+    const [row] = await db.select().from(proposals)
+      .where(and(eq(proposals.id, id), eq(proposals.userId, userId)));
+    return row;
+  }
+
+  async getProposalByIdempotencyKey(userId: string, key: string): Promise<Proposal | undefined> {
+    const [row] = await db.select().from(proposals)
+      .where(and(eq(proposals.userId, userId), eq(proposals.idempotencyKey, key)));
+    return row;
+  }
+
+  async listProposals(userId: string, status?: string): Promise<Proposal[]> {
+    const conditions = [eq(proposals.userId, userId)];
+    if (status) conditions.push(eq(proposals.status, status));
+    return await db.select().from(proposals)
+      .where(and(...conditions))
+      .orderBy(desc(proposals.createdAt));
+  }
+
+  async updateProposalStatus(id: string, userId: string, patch: Partial<Proposal>): Promise<Proposal | undefined> {
+    const [row] = await db.update(proposals)
+      .set(patch)
+      .where(and(eq(proposals.id, id), eq(proposals.userId, userId)))
+      .returning();
+    return row;
+  }
+
+  // ---------- Audit log ----------
+  async appendAudit(entry: Omit<AuditLogEntry, "id" | "createdAt">): Promise<AuditLogEntry> {
+    const [row] = await db.insert(auditLog).values(entry).returning();
+    return row;
+  }
+
+  async listAudit(userId: string, limit = 200): Promise<AuditLogEntry[]> {
+    return await db.select().from(auditLog)
+      .where(eq(auditLog.userId, userId))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit);
+  }
+
+  // ---------- API tokens ----------
+  async createApiToken(
+    userId: string,
+    name: string,
+    tokenHash: string,
+    tokenPrefix: string,
+    scopes: string[],
+    opts: { autoApprove?: boolean; autoApproveThreshold?: string; expiresAt?: Date } = {}
+  ): Promise<ApiToken> {
+    const [row] = await db.insert(apiTokens).values({
+      userId,
+      name,
+      tokenHash,
+      tokenPrefix,
+      scopes: scopes as any,
+      autoApprove: opts.autoApprove ?? false,
+      autoApproveThreshold: opts.autoApproveThreshold,
+      expiresAt: opts.expiresAt,
+    }).returning();
+    return row;
+  }
+
+  async getApiTokenByHash(tokenHash: string): Promise<ApiToken | undefined> {
+    const [row] = await db.select().from(apiTokens)
+      .where(and(eq(apiTokens.tokenHash, tokenHash), isNull(apiTokens.revokedAt)));
+    return row;
+  }
+
+  async listApiTokens(userId: string): Promise<ApiToken[]> {
+    return await db.select().from(apiTokens)
+      .where(eq(apiTokens.userId, userId))
+      .orderBy(desc(apiTokens.createdAt));
+  }
+
+  async revokeApiToken(id: string, userId: string): Promise<void> {
+    await db.update(apiTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(apiTokens.id, id), eq(apiTokens.userId, userId)));
+  }
+
+  async touchApiToken(id: string): Promise<void> {
+    await db.update(apiTokens)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiTokens.id, id));
+  }
+
+  // ---------- Agent work queue ----------
+  async getAgentWork(userId: string) {
+    const missingBasis = await this.getTransactionsMissingBasis(userId, 50);
+    const needsReview = await this.getTransactions({ userId, needsReview: true });
+    const pendingProposals = await this.listProposals(userId, "pending");
+    return {
+      missingBasisCount: missingBasis.length,
+      needsReviewCount: needsReview.length,
+      pendingProposalsCount: pendingProposals.length,
+      missingBasis: missingBasis.slice(0, 25),
+      needsReview: needsReview.slice(0, 25),
+      pendingProposals: pendingProposals.slice(0, 25),
     };
   }
 }

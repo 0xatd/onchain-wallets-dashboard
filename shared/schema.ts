@@ -107,11 +107,18 @@ export const transactions = pgTable("transactions", {
   // Pricing
   priceAtTime: decimal("price_at_time", { precision: 20, scale: 8 }),
   valueUsd: decimal("value_usd", { precision: 20, scale: 2 }),
-  
+
+  // Cost basis provenance (set when an agent or human supplies missing basis)
+  basisSource: text("basis_source"),
+  basisEvidenceUrl: text("basis_evidence_url"),
+  basisSetBy: text("basis_set_by"),
+  basisSetAt: timestamp("basis_set_at"),
+  basisNotes: text("basis_notes"),
+
   // Flags
   isSpam: boolean("is_spam").default(false),
   isDust: boolean("is_dust").default(false),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -165,7 +172,14 @@ export const taxLots = pgTable("tax_lots", {
   remainingAmount: decimal("remaining_amount", { precision: 38, scale: 18 }).notNull(),
   costBasisUsd: decimal("cost_basis_usd", { precision: 20, scale: 2 }).notNull(),
   acquiredAt: timestamp("acquired_at").notNull(),
-  
+
+  // Provenance: where did this cost basis number come from?
+  basisSource: text("basis_source"),
+  basisEvidenceUrl: text("basis_evidence_url"),
+  basisSetBy: text("basis_set_by"),
+  basisSetAt: timestamp("basis_set_at"),
+  basisNotes: text("basis_notes"),
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -245,6 +259,96 @@ export const insertTelegramLinkSchema = createInsertSchema(telegramLinks).omit({
 
 export type InsertTelegramLink = z.infer<typeof insertTelegramLinkSchema>;
 export type TelegramLink = typeof telegramLinks.$inferSelect;
+
+// Agent / human proposals — every agent write goes through this approval workflow.
+export const PROPOSAL_ACTIONS = [
+  "set_cost_basis",
+  "classify_transaction",
+  "link_transfer_pair",
+  "merge_duplicate_txs",
+  "create_tax_lot",
+  "mark_reviewed",
+] as const;
+export type ProposalAction = typeof PROPOSAL_ACTIONS[number];
+
+export const PROPOSAL_STATUSES = ["pending", "approved", "rejected", "applied", "failed"] as const;
+export type ProposalStatus = typeof PROPOSAL_STATUSES[number];
+
+export const proposals = pgTable("proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  actor: text("actor").notNull(), // "agent:<token-name>" or "user:<id>"
+  actorType: text("actor_type").notNull().default("agent"),
+  action: text("action").notNull(),
+  targetType: text("target_type").notNull(), // "transaction" | "tax_lot" | etc.
+  targetId: varchar("target_id"),
+  payload: jsonb("payload").notNull(),
+  reasoning: text("reasoning"),
+  evidenceUrl: text("evidence_url"),
+  confidence: decimal("confidence", { precision: 5, scale: 4 }),
+  status: text("status").notNull().default("pending"),
+  idempotencyKey: text("idempotency_key"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  decidedAt: timestamp("decided_at"),
+  decidedBy: text("decided_by"),
+  appliedAt: timestamp("applied_at"),
+});
+
+export const insertProposalSchema = createInsertSchema(proposals).omit({
+  id: true,
+  createdAt: true,
+  decidedAt: true,
+  appliedAt: true,
+});
+
+export type InsertProposal = z.infer<typeof insertProposalSchema>;
+export type Proposal = typeof proposals.$inferSelect;
+
+// Append-only audit log of every meaningful state change.
+export const auditLog = pgTable("audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  targetType: text("target_type"),
+  targetId: varchar("target_id"),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AuditLogEntry = typeof auditLog.$inferSelect;
+
+// API tokens scoped per user — used by AI agents and the MCP server.
+export const API_TOKEN_SCOPES = [
+  "read",
+  "transactions:write",
+  "basis:propose",
+  "proposals:apply",
+  "reports:read",
+] as const;
+export type ApiTokenScope = typeof API_TOKEN_SCOPES[number];
+
+export const apiTokens = pgTable("api_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  // Store SHA-256 hash of the token. Plain token returned ONCE on create.
+  tokenHash: text("token_hash").notNull().unique(),
+  tokenPrefix: text("token_prefix").notNull(),
+  scopes: jsonb("scopes").notNull().default(sql`'[]'::jsonb`),
+  // If true, proposals from this token are auto-approved when confidence >= threshold.
+  autoApprove: boolean("auto_approve").default(false),
+  autoApproveThreshold: decimal("auto_approve_threshold", { precision: 5, scale: 4 }),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ApiToken = typeof apiTokens.$inferSelect;
 
 // Dashboard stats type
 export type DashboardStats = {

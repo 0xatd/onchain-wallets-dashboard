@@ -1,0 +1,44 @@
+# One-command self-host: `docker compose up`
+# Brings up Postgres and the app. Visit http://localhost:5000 — you're already
+# logged in as the local user (AUTH_MODE=local).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: octax
+      POSTGRES_PASSWORD: octax
+      POSTGRES_DB: octax
+    ports:
+      - "5432:5432"
+    volumes:
+      - octax_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U octax"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://octax:octax@db:5432/octax
+      SESSION_SECRET: ${SESSION_SECRET:-dev-please-change}
+      AUTH_MODE: ${AUTH_MODE:-local}
+      VITE_AUTH_MODE: ${VITE_AUTH_MODE:-local}
+      LOCAL_USER_ID: ${LOCAL_USER_ID:-local-user}
+      LOCAL_USER_EMAIL: ${LOCAL_USER_EMAIL:-you@localhost}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      NODE_ENV: production
+      PORT: "5000"
+    ports:
+      - "5000:5000"
+    command: sh -c "npm run db:push && npm start"
+
+volumes:
+  octax_data:

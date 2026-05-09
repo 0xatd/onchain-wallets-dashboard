@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { insertWalletSchema, insertRuleSchema } from "../shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
+import { registerAgentRoutes } from "./agentRoutes";
+import { openApiSpec } from "./openapi";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -18,6 +20,12 @@ export async function registerRoutes(
 
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // OpenAPI spec — published at /api/openapi.json so AI agents can self-describe.
+  app.get("/api/openapi.json", (_req, res) => res.json(openApiSpec));
+
+  // Agent + proposal + audit + missing-basis + JSON export endpoints.
+  registerAgentRoutes(app);
 
   // Helper to get userId from request
   const getUserId = (req: any): string => req.user?.claims?.sub;
@@ -442,7 +450,7 @@ export async function registerRoutes(
 
       res.json({
         verificationCode,
-        instructions: "Send this code to the CryptoTax Pro bot on Telegram to verify your account."
+        instructions: "Send this code to the Open Crypto Tax bot on Telegram to verify your account."
       });
     } catch (error) {
       console.error("Error creating Telegram link:", error);
@@ -496,7 +504,7 @@ export async function registerRoutes(
           await sendVerificationSuccess(parsed.chatId);
           await sendWelcomeMessage(parsed.chatId);
         } else {
-          await sendMessage(parsed.chatId, "Invalid or expired verification code. Please generate a new one from the CryptoTax Pro app.");
+          await sendMessage(parsed.chatId, "Invalid or expired verification code. Please generate a new one from the Open Crypto Tax app.");
         }
       }
       
@@ -525,7 +533,7 @@ export async function registerRoutes(
           if (parsed.command === "status" || parsed.command === "start") {
             const stats = await storage.getDashboardStats(link.userId);
             await sendMessage(parsed.chatId, 
-              `<b>Your CryptoTax Pro Status</b>
+              `<b>Your Open Crypto Tax Status</b>
 
 ` +
               `Wallets: ${stats.totalWallets}
@@ -538,7 +546,7 @@ export async function registerRoutes(
           }
           if (parsed.command === "help") {
             await sendMessage(parsed.chatId,
-              `<b>CryptoTax Pro Commands</b>
+              `<b>Open Crypto Tax Commands</b>
 
 ` +
               `<code>status</code> - Show your stats

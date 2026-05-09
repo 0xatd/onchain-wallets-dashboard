@@ -11,15 +11,16 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { 
-  LayoutDashboard, 
-  Wallet, 
-  ArrowLeftRight, 
-  AlertCircle, 
-  Settings2, 
+import {
+  LayoutDashboard,
+  Wallet,
+  ArrowLeftRight,
+  AlertCircle,
+  Settings2,
   FileText,
   Shield,
-  TrendingUp
+  Bot,
+  Receipt
 } from "lucide-react";
 
 const navigationItems = [
@@ -42,6 +43,11 @@ const navigationItems = [
     title: "Needs Review",
     url: "/review",
     icon: AlertCircle,
+  },
+  {
+    title: "Agent Proposals",
+    url: "/proposals",
+    icon: Bot,
   },
 ];
 
@@ -71,11 +77,11 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
-            <TrendingUp className="h-5 w-5 text-primary-foreground" />
+            <Receipt className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">CryptoTax Pro</span>
-            <span className="text-xs text-muted-foreground">Tax Year 2024</span>
+            <span className="text-sm font-semibold">Open Crypto Tax</span>
+            <span className="text-xs text-muted-foreground">Self-hosted · MIT</span>
           </div>
         </div>
       </SidebarHeader>

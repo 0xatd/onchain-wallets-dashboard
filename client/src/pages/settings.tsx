@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  MessageCircle, 
-  Link2, 
-  Unlink, 
-  CheckCircle, 
+import {
+  MessageCircle,
+  Link2,
+  Unlink,
+  CheckCircle,
   AlertCircle,
   Copy,
   ExternalLink,
-  Bell
+  Bell,
+  Bot,
+  KeyRound,
+  Trash2
 } from "lucide-react";
 import { useState } from "react";
 
@@ -235,6 +238,195 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
+
+      <AgentTokensCard />
     </div>
+  );
+}
+
+// ---------- Agent tokens ----------
+
+type AgentToken = {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  autoApprove: boolean;
+  autoApproveThreshold: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+};
+
+const ALL_SCOPES = ["read", "transactions:write", "basis:propose", "proposals:apply", "reports:read"] as const;
+
+function AgentTokensCard() {
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [scopes, setScopes] = useState<string[]>(["read", "basis:propose"]);
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [threshold, setThreshold] = useState("0.95");
+  const [createdToken, setCreatedToken] = useState<string | null>(null);
+
+  const { data: tokens, isLoading } = useQuery<AgentToken[]>({ queryKey: ["/api/agent/tokens"] });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/agent/tokens", {
+        name,
+        scopes,
+        autoApprove,
+        autoApproveThreshold: autoApprove ? parseFloat(threshold) : undefined,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setCreatedToken(data.token);
+      setName("");
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/tokens"] });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/agent/tokens/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/tokens"] });
+      toast({ title: "Token revoked" });
+    },
+  });
+
+  const toggleScope = (s: string) => {
+    setScopes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  };
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied" });
+  };
+
+  return (
+    <Card data-testid="card-agent-tokens">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500/10">
+            <Bot className="h-5 w-5 text-blue-500" />
+          </div>
+          <div>
+            <CardTitle>Agent API Tokens</CardTitle>
+            <CardDescription>
+              Issue tokens for AI agents (Claude via the MCP server, scripts, etc.). Agents propose changes — you approve them.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {createdToken && (
+          <div className="p-4 rounded-lg border border-green-500/30 bg-green-50 dark:bg-green-950/20 space-y-3">
+            <div className="flex items-start gap-2">
+              <KeyRound className="h-5 w-5 text-green-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-green-700 dark:text-green-300">Token created. Copy it now — you won't see it again.</p>
+                <code className="block mt-2 px-3 py-2 rounded bg-background border font-mono text-xs break-all" data-testid="text-new-token">
+                  {createdToken}
+                </code>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => copy(createdToken)}>
+                <Copy className="h-3 w-3 mr-1" /> Copy
+              </Button>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => setCreatedToken(null)}>Dismiss</Button>
+          </div>
+        )}
+
+        <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+          <h4 className="text-sm font-medium">Create a new token</h4>
+          <input
+            type="text"
+            placeholder="Token name (e.g. claude-desktop)"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full px-3 py-2 rounded-md border bg-background text-sm"
+            data-testid="input-token-name"
+          />
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Scopes</p>
+            <div className="flex flex-wrap gap-2">
+              {ALL_SCOPES.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleScope(s)}
+                  className={`text-xs px-2 py-1 rounded border ${scopes.includes(s) ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+                  data-testid={`button-scope-${s}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={autoApprove} onChange={e => setAutoApprove(e.target.checked)} />
+            Auto-approve high-confidence proposals
+          </label>
+          {autoApprove && (
+            <div className="flex items-center gap-2 text-sm pl-6">
+              <span className="text-muted-foreground">Threshold (0–1):</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={threshold}
+                onChange={e => setThreshold(e.target.value)}
+                className="w-20 px-2 py-1 rounded border bg-background"
+              />
+            </div>
+          )}
+          <Button onClick={() => createMutation.mutate()} disabled={!name || createMutation.isPending} data-testid="button-create-token">
+            <KeyRound className="h-4 w-4 mr-2" />
+            {createMutation.isPending ? "Creating…" : "Create token"}
+          </Button>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium mb-3">Existing tokens</h4>
+          {isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : !tokens || tokens.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No tokens yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {tokens.map(t => (
+                <div key={t.id} className="flex items-center justify-between p-3 rounded border" data-testid={`token-row-${t.id}`}>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{t.name}</span>
+                      <code className="text-xs text-muted-foreground font-mono">{t.prefix}…</code>
+                      {t.revokedAt && <Badge variant="destructive" className="text-xs">revoked</Badge>}
+                      {t.autoApprove && <Badge variant="outline" className="text-xs">auto-approve ≥ {t.autoApproveThreshold}</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Scopes: {(t.scopes || []).join(", ") || "—"}
+                      {t.lastUsedAt && <> · Last used {new Date(t.lastUsedAt).toLocaleDateString()}</>}
+                    </div>
+                  </div>
+                  {!t.revokedAt && (
+                    <Button size="sm" variant="outline" onClick={() => revokeMutation.mutate(t.id)} data-testid={`button-revoke-${t.id}`}>
+                      <Trash2 className="h-3 w-3 mr-1" /> Revoke
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="text-xs text-muted-foreground border-t pt-4">
+          Connect Claude or another MCP client by setting <code className="bg-muted px-1 rounded">OPEN_CRYPTO_TAX_TOKEN</code> on the <code className="bg-muted px-1 rounded">open-crypto-tax-mcp</code> server. See <a href="/mcp/README.md" className="underline">mcp/README.md</a>.
+        </div>
+      </CardContent>
+    </Card>
   );
 }

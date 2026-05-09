@@ -2,41 +2,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  Wallet, 
-  FileText, 
-  Shield, 
-  TrendingUp, 
-  Zap, 
+import {
+  Wallet,
+  FileText,
+  Shield,
+  Bot,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Github,
+  Receipt,
+  Sparkles
 } from "lucide-react";
 
 const features = [
   {
     icon: Wallet,
-    title: "Multi-Chain Support",
-    description: "Track wallets across Ethereum, Solana, Bitcoin, and 6+ more blockchains"
+    title: "Aggregate everything",
+    description: "Wallets across Ethereum, Bitcoin, Solana, and 6+ more chains. CSV import for exchanges. One dataset, every account."
   },
   {
-    icon: Zap,
-    title: "Auto Classification",
-    description: "AI-powered transaction classification with intent-aware categorization"
+    icon: Sparkles,
+    title: "Fix missing cost basis",
+    description: "Surface every disposal where the basis is unknown. Hand it to your AI agent — or fill in by hand with full provenance."
+  },
+  {
+    icon: Bot,
+    title: "Built for AI agents",
+    description: "MCP server + REST API + JSON export. Claude (or any agent) connects, proposes fixes, you approve. Audit log keeps everyone honest."
   },
   {
     icon: FileText,
-    title: "Tax Reports",
-    description: "Generate Form 8949, Schedule D, and comprehensive income reports"
-  },
-  {
-    icon: Shield,
-    title: "Secure & Private",
-    description: "Your data is encrypted and only accessible to you"
+    title: "Tax-ready output",
+    description: "Form 8949, Schedule D, income reports. Export structured JSON for your accountant or your favorite tax LLM workflow."
   }
 ];
 
 const supportedChains = [
-  "Ethereum", "Bitcoin", "Solana", "Polygon", 
+  "Ethereum", "Bitcoin", "Solana", "Polygon",
   "Arbitrum", "Optimism", "Base", "Avalanche", "BSC"
 ];
 
@@ -44,15 +46,19 @@ const reportTypes = [
   "Form 8949 (Capital Gains)",
   "Schedule D Summary",
   "Income Report",
-  "Staking Report",
-  "Airdrop Report",
-  "NFT Report"
+  "JSON Export (agents)",
+  "Audit Log",
+  "Missing Cost Basis Queue"
 ];
 
 export default function LandingPage() {
-  const { loginWithGoogle } = useAuth();
+  const { loginWithGoogle, isLocalMode } = useAuth();
 
   const handleLogin = async () => {
+    if (isLocalMode) {
+      window.location.reload();
+      return;
+    }
     try {
       await loginWithGoogle();
     } catch (error) {
@@ -66,33 +72,44 @@ export default function LandingPage() {
         <nav className="flex items-center justify-between mb-16">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary-foreground" />
+              <Receipt className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">CryptoTax Pro</span>
+            <span className="text-xl font-bold">Open Crypto Tax</span>
           </div>
-          <Button onClick={handleLogin} data-testid="button-login-nav">
-            Sign In
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" asChild>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                <Github className="w-4 h-4 mr-2" /> GitHub
+              </a>
+            </Button>
+            <Button onClick={handleLogin} data-testid="button-login-nav">
+              {isLocalMode ? "Open app" : "Sign In"}
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </div>
         </nav>
 
         <section className="text-center mb-20">
           <Badge variant="secondary" className="mb-4" data-testid="badge-tagline">
-            Professional Crypto Tax Software
+            MIT-licensed · Self-hosted · Agent-friendly
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-headline">
-            Track, Classify & Report
+            Free crypto tax tool
             <br />
-            Your Crypto Taxes
+            for you and your AI agent
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8" data-testid="text-subheadline">
-            Automatically track transactions across multiple blockchains, 
-            classify them with AI, and generate audit-ready tax reports.
+            Self-host. Connect your wallets. Let Claude (or any AI agent) work the missing-cost-basis queue and propose fixes — you approve in one click. Hand the clean dataset to any LLM to finish your taxes.
           </p>
           <div className="flex gap-4 justify-center">
             <Button size="lg" onClick={handleLogin} data-testid="button-get-started">
-              Get Started Free
+              {isLocalMode ? "Open app" : "Get started — free"}
               <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <a href="/api/openapi.json" target="_blank" rel="noopener noreferrer">
+                View API
+              </a>
             </Button>
           </div>
         </section>
@@ -118,10 +135,10 @@ export default function LandingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="w-5 h-5" />
-                Supported Blockchains
+                Supported blockchains
               </CardTitle>
               <CardDescription>
-                Connect wallets from all major networks
+                Read-only address tracking — your keys never leave your wallet.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -139,10 +156,10 @@ export default function LandingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Tax Reports
+                What you get out
               </CardTitle>
               <CardDescription>
-                Generate all required tax documents
+                Designed for humans, accountants, and AI agents.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -160,19 +177,19 @@ export default function LandingPage() {
 
         <section className="text-center py-12 border-t">
           <h2 className="text-2xl font-bold mb-4" data-testid="text-cta-heading">
-            Ready to simplify your crypto taxes?
+            Point Claude at your wallets. Watch your basis problems disappear.
           </h2>
-          <p className="text-muted-foreground mb-6">
-            Join thousands of traders who trust CryptoTax Pro for accurate reporting
+          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+            The MCP server lets your AI agent read your transactions and propose cost-basis fixes with evidence. You approve. Done.
           </p>
           <Button size="lg" onClick={handleLogin} data-testid="button-cta-login">
-            Get Started Now
+            {isLocalMode ? "Open app" : "Get started"}
             <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         </section>
 
         <footer className="text-center text-sm text-muted-foreground py-8">
-          <p>&copy; {new Date().getFullYear()} CryptoTax Pro. All rights reserved.</p>
+          <p>Open Crypto Tax · MIT-licensed · Built for self-hosting and AI workflows.</p>
         </footer>
       </div>
     </div>

@@ -1,0 +1,25 @@
+{
+  "name": "open-crypto-tax-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the Open Crypto Tax aggregator. Lets AI agents (Claude, etc.) read your wallets/transactions and propose cost-basis fixes that you approve in-app.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "open-crypto-tax-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5",
+    "typescript": "5.6.3",
+    "@types/node": "20.19.27"
+  }
+}
