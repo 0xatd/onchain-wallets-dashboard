@@ -3,7 +3,6 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { seedDatabase } from "./seed";
 
 const app = express();
 const httpServer = createServer(app);
@@ -88,9 +87,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Note: Seeding is disabled because data now requires userId
-  // Users will create their own wallets after logging in
-  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

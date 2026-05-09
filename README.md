@@ -135,15 +135,13 @@ mcp/           Standalone MCP server that wraps the HTTP API
 
 ## Status
 
-Working today: wallet aggregation (Alchemy), transaction sync, classification + custom rules, FIFO cost basis tracking, Form 8949/Schedule D CSV exports, **agent proposal workflow + audit log**, **MCP server**, **JSON export**, **OpenAPI spec**, **local-auth mode**.
+Working today: wallet aggregation (Alchemy + **Etherscan V2 fallback**), transaction sync, classification + custom rules, **FIFO/LIFO/HIFO/specific-ID** cost-basis matching, Form 8949/Schedule D CSV exports, **agent proposal workflow + audit log**, **MCP server**, **JSON export**, **OpenAPI spec**, **local-auth mode**, **generic CSV importer** (Coinbase/Kraken/Binance/Robinhood-shaped), **Vitest** tests for the math-critical pieces.
 
 Planned (PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)):
-- LIFO/HIFO/specific-ID lot matching (schema is ready, matcher only does FIFO)
 - Wash-sale detection
-- CSV importers for Coinbase / Kraken / Binance / Robinhood
-- Etherscan fallback when no Alchemy key
-- Solana / Bitcoin sync
-- Tests (Vitest) for lot-matching and disposal calc
+- Native Solana / Bitcoin sync
+- Per-exchange importer presets (auto-detect Coinbase header, etc.)
+- More tests around the proposal applier and the agent token middleware
 
 ---
 

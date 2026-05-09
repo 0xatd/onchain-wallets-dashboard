@@ -112,6 +112,28 @@ export const openApiSpec = {
     "/api/export/json": {
       get: { summary: "Full structured export — wallets, transactions, lots, disposals, settings", responses: { "200": { description: "OK" } } },
     },
+    "/api/import/csv": {
+      post: {
+        summary: "Import already-parsed CSV rows into a wallet",
+        description: "Browser parses the CSV, server maps rows to transactions. Works with Coinbase / Kraken / Binance / Robinhood-shaped exports.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["wallet_id", "rows"],
+                properties: {
+                  wallet_id: { type: "string" },
+                  rows: { type: "array", items: { type: "object", additionalProperties: { type: "string" } } },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "Import summary" } },
+      },
+    },
     "/api/transactions": {
       get: { summary: "List transactions (filterable)", responses: { "200": { description: "OK" } } },
     },

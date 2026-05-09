@@ -62,6 +62,8 @@ export interface IStorage {
 
   // Tax Lots
   getTaxLots(walletId?: string): Promise<TaxLot[]>;
+  getTaxLotsForUserToken(userId: string, token: string): Promise<TaxLot[]>;
+  updateTaxLotRemaining(id: string, newRemaining: string): Promise<void>;
   createTaxLot(lot: InsertTaxLot): Promise<TaxLot>;
 
   // Disposals
@@ -292,6 +294,20 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(taxLots).where(eq(taxLots.walletId, walletId));
     }
     return await db.select().from(taxLots);
+  }
+
+  async getTaxLotsForUserToken(userId: string, token: string): Promise<TaxLot[]> {
+    const userWallets = await db.select({ id: wallets.id })
+      .from(wallets)
+      .where(eq(wallets.userId, userId));
+    const walletIds = userWallets.map(w => w.id);
+    if (walletIds.length === 0) return [];
+    return await db.select().from(taxLots)
+      .where(and(inArray(taxLots.walletId, walletIds), eq(taxLots.token, token)));
+  }
+
+  async updateTaxLotRemaining(id: string, newRemaining: string): Promise<void> {
+    await db.update(taxLots).set({ remainingAmount: newRemaining }).where(eq(taxLots.id, id));
   }
 
   async createTaxLot(lot: InsertTaxLot): Promise<TaxLot> {

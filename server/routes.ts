@@ -105,22 +105,21 @@ export async function registerRoutes(
       }
 
       const { fetchTransactions, isAlchemyConfigured, ALCHEMY_SUPPORTED_CHAINS } = await import("./services/alchemy");
-      
-      if (!isAlchemyConfigured()) {
-        return res.status(400).json({ 
-          error: "Blockchain API not configured",
-          message: "Add ALCHEMY_API_KEY to your secrets to sync real transaction data."
+      const { fetchTransactionsViaEtherscan, isEtherscanConfigured, ETHERSCAN_SUPPORTED_CHAINS } = await import("./services/etherscan");
+
+      const useAlchemy = isAlchemyConfigured() && ALCHEMY_SUPPORTED_CHAINS.includes(wallet.chain);
+      const useEtherscan = !useAlchemy && isEtherscanConfigured() && ETHERSCAN_SUPPORTED_CHAINS.includes(wallet.chain);
+
+      if (!useAlchemy && !useEtherscan) {
+        return res.status(400).json({
+          error: "No sync provider configured for this chain",
+          message: `Set ALCHEMY_API_KEY (chains: ${ALCHEMY_SUPPORTED_CHAINS.join(", ")}) or ETHERSCAN_API_KEY (chains: ${ETHERSCAN_SUPPORTED_CHAINS.join(", ")}).`,
         });
       }
 
-      if (!ALCHEMY_SUPPORTED_CHAINS.includes(wallet.chain)) {
-        return res.status(400).json({ 
-          error: "Chain not supported",
-          message: `${wallet.chain} is not yet supported for automatic sync. Supported chains: ${ALCHEMY_SUPPORTED_CHAINS.join(", ")}`
-        });
-      }
-
-      const result = await fetchTransactions(wallet.address, wallet.chain, walletId);
+      const result = useAlchemy
+        ? await fetchTransactions(wallet.address, wallet.chain, walletId)
+        : await fetchTransactionsViaEtherscan(wallet.address, wallet.chain, walletId);
       
       if (result.error) {
         return res.status(400).json({ error: result.error });

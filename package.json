@@ -8,6 +8,8 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
@@ -46,14 +48,15 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
+    "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "drizzle-orm": "^0.39.3",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^5.0.1",
     "express-session": "^1.19.0",
-    "firebase-admin": "^12.0.0",
     "firebase": "^10.8.0",
+    "firebase-admin": "^12.0.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
@@ -78,13 +81,13 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0",
-    "cors": "^2.8.5"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.18",
     "@types/connect-pg-simple": "^7.0.3",
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.2",
     "@types/node": "20.19.27",
@@ -102,7 +105,7 @@
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
     "vite": "^7.3.0",
-    "@types/cors": "^2.8.17"
+    "vitest": "^2.1.9"
   },
   "overrides": {
     "drizzle-kit": {

@@ -255,6 +255,47 @@ export function registerAgentRoutes(app: Express) {
     }
   });
 
+  // CSV import — accepts already-parsed rows and a target wallet id.
+  app.post("/api/import/csv", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const body = z.object({
+        wallet_id: z.string(),
+        rows: z.array(z.record(z.string())).min(1),
+      }).parse(req.body);
+
+      const wallet = await storage.getWallet(body.wallet_id, userId);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+
+      const { rowsToTransactions } = await import("./services/csvImporter");
+      const { transactions, summary } = rowsToTransactions(body.rows, wallet.id, wallet.chain);
+
+      let imported = 0;
+      let dupes = 0;
+      for (const tx of transactions) {
+        const existing = await storage.getTransactionByHash(tx.txHash, userId);
+        if (existing) { dupes++; continue; }
+        await storage.createTransaction(tx);
+        imported++;
+      }
+      await storage.appendAudit({
+        userId,
+        actor: `user:${userId}`,
+        action: "csv_import",
+        targetType: "wallet",
+        targetId: wallet.id,
+        before: null,
+        after: { imported, dupes, summary } as any,
+        metadata: { rowCount: body.rows.length },
+      });
+      res.json({ imported, duplicates: dupes, skipped: summary.skipped, errors: summary.errors });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: "Invalid CSV import body", details: err.errors });
+      console.error(err);
+      res.status(500).json({ error: "CSV import failed" });
+    }
+  });
+
   // Structured JSON export of everything an agent might need.
   app.get("/api/export/json", isAuthenticated, async (req, res) => {
     try {

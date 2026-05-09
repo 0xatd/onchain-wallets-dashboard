@@ -108,7 +108,7 @@ function classifyAggregatedTx(tx: AggregatedTx, walletAddress: string): string {
     
     // Check for distinct tokens (not just same token in both directions)
     const hasDistinctTokens = inSymbols.size > 0 && outSymbols.size > 0 &&
-      [...inSymbols].some(s => !outSymbols.has(s));
+      Array.from(inSymbols).some(s => !outSymbols.has(s));
     
     if (hasDistinctTokens) {
       return "swap";
@@ -300,7 +300,7 @@ export async function fetchTransactions(
 
     const transactions: InsertTransaction[] = [];
     
-    for (const [, tx] of txMap) {
+    for (const tx of Array.from(txMap.values())) {
       const classification = classifyAggregatedTx(tx, walletAddress);
       const blockNumber = parseInt(tx.blockNum, 16);
       const timestamp = new Date(tx.timestamp);
@@ -310,10 +310,10 @@ export async function fetchTransactions(
       const primaryOut = tx.tokensOut[0];
       
       // Find contract address from transfers
-      const contractAddr = tx.transfers.find(t => t.rawContract.address)?.rawContract.address || null;
-      
+      const contractAddr = tx.transfers.find((t: any) => t.rawContract?.address)?.rawContract?.address || null;
+
       // Calculate approximate USD value (simplified)
-      const totalValue = tx.transfers.reduce((sum, t) => sum + (t.value || 0), 0);
+      const totalValue = tx.transfers.reduce((sum: number, t: any) => sum + (t.value || 0), 0);
       
       transactions.push({
         walletId,
