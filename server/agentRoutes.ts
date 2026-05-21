@@ -369,20 +369,47 @@ export function registerAgentRoutes(app: Express) {
     }
   });
 
+  const csvImportBodySchema = z.object({
+    wallet_id: z.string(),
+    source: z.enum(["generic", "coinbase", "robinhood"]).default("generic"),
+    rows: z.array(z.record(z.string())).min(1),
+  });
+
+  // CSV preview — accepts already-parsed rows and returns mapped sample rows.
+  app.post("/api/import/csv/preview", ...requireScopedAuth(["transactions:write"]), async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const body = csvImportBodySchema.parse(req.body);
+
+      const wallet = await storage.getWallet(body.wallet_id, userId);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+
+      const { rowsToTransactions, previewCsvImport } = await import("./services/csvImporter");
+      const { transactions } = rowsToTransactions(body.rows, wallet.id, wallet.chain, body.source);
+      const preview = previewCsvImport(body.rows, wallet.id, wallet.chain, body.source);
+      let duplicates = 0;
+      for (const tx of transactions) {
+        if (await storage.getTransactionByHash(tx.txHash, userId)) duplicates++;
+      }
+      res.json({ ...preview, duplicates, importable: preview.imported - duplicates });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: "Invalid CSV preview body", details: err.errors });
+      console.error(err);
+      res.status(500).json({ error: "CSV preview failed" });
+    }
+  });
+
   // CSV import — accepts already-parsed rows and a target wallet id.
   app.post("/api/import/csv", ...requireScopedAuth(["transactions:write"]), async (req, res) => {
     try {
       const userId = getUserId(req);
-      const body = z.object({
-        wallet_id: z.string(),
-        rows: z.array(z.record(z.string())).min(1),
-      }).parse(req.body);
+      const body = csvImportBodySchema.parse(req.body);
 
       const wallet = await storage.getWallet(body.wallet_id, userId);
       if (!wallet) return res.status(404).json({ error: "Wallet not found" });
 
       const { rowsToTransactions } = await import("./services/csvImporter");
-      const { transactions, summary } = rowsToTransactions(body.rows, wallet.id, wallet.chain);
+      const { transactions, summary } = rowsToTransactions(body.rows, wallet.id, wallet.chain, body.source);
 
       let imported = 0;
       let dupes = 0;
@@ -400,9 +427,9 @@ export function registerAgentRoutes(app: Express) {
         targetId: wallet.id,
         before: null,
         after: { imported, dupes, summary } as any,
-        metadata: { rowCount: body.rows.length },
+        metadata: { rowCount: body.rows.length, source: body.source },
       });
-      res.json({ imported, duplicates: dupes, skipped: summary.skipped, errors: summary.errors });
+      res.json({ imported, duplicates: dupes, skipped: summary.skipped, errors: summary.errors, source: body.source, needsReview: summary.needsReview });
     } catch (err: any) {
       if (err instanceof z.ZodError) return res.status(400).json({ error: "Invalid CSV import body", details: err.errors });
       console.error(err);

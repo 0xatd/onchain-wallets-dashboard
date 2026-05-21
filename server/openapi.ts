@@ -132,10 +132,10 @@ export const openApiSpec = {
     "/api/export/json": {
       get: { summary: "Full structured export — wallets, transactions, lots, disposals, settings", responses: { "200": { description: "OK" } } },
     },
-    "/api/import/csv": {
+    "/api/import/csv/preview": {
       post: {
-        summary: "Import already-parsed CSV rows into a wallet",
-        description: "Browser parses the CSV, server maps rows to transactions. Works with Coinbase / Kraken / Binance / Robinhood-shaped exports.",
+        summary: "Preview already-parsed CSV rows before import",
+        description: "Browser parses the CSV, server maps rows using generic, Coinbase, or Robinhood presets and returns a draft preview. Informational records only, not professional advice.",
         requestBody: {
           required: true,
           content: {
@@ -145,6 +145,30 @@ export const openApiSpec = {
                 required: ["wallet_id", "rows"],
                 properties: {
                   wallet_id: { type: "string" },
+                  source: { type: "string", enum: ["generic", "coinbase", "robinhood"], default: "generic" },
+                  rows: { type: "array", items: { type: "object", additionalProperties: { type: "string" } } },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "Import preview" } },
+      },
+    },
+    "/api/import/csv": {
+      post: {
+        summary: "Import already-parsed CSV rows into a wallet",
+        description: "Browser parses the CSV, server maps rows to transactions. Supports generic, Coinbase, and Robinhood presets. Imported records remain draft/informational and ambiguous rows are marked needs-review.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["wallet_id", "rows"],
+                properties: {
+                  wallet_id: { type: "string" },
+                  source: { type: "string", enum: ["generic", "coinbase", "robinhood"], default: "generic" },
                   rows: { type: "array", items: { type: "object", additionalProperties: { type: "string" } } },
                 },
               },

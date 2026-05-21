@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,7 +43,9 @@ import {
   Sparkles,
   Eye,
   X,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  AlertTriangle
 } from "lucide-react";
 import type { Wallet as WalletType } from "@shared/schema";
 import { SUPPORTED_CHAINS } from "@shared/schema";
@@ -192,6 +194,7 @@ function WalletCard({ wallet }: { wallet: WalletType }) {
 
 export default function Wallets() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: wallets, isLoading } = useQuery<WalletType[]>({
@@ -243,13 +246,23 @@ export default function Wallets() {
             Manage your connected wallet addresses
           </p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-wallet">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Wallet
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={!wallets?.length} data-testid="button-import-csv">
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <ExchangeCsvImportDialog wallets={wallets || []} onDone={() => setIsImportDialogOpen(false)} />
+          </Dialog>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-wallet">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Wallet
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Add Wallet</DialogTitle>
@@ -353,7 +366,8 @@ export default function Wallets() {
               </form>
             </Form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -402,6 +416,246 @@ export default function Wallets() {
         form.reset({ address: s.address, chain: s.chains[0] || "ethereum", label: "", entityType: "personal" });
         setIsAddDialogOpen(true);
       }} />
+    </div>
+  );
+}
+
+// ---------- CSV import ----------
+
+type CsvSource = "coinbase" | "robinhood" | "generic";
+type CsvPreview = {
+  imported: number;
+  importable: number;
+  duplicates: number;
+  skipped: number;
+  needsReview: number;
+  errors: { row: number; reason: string }[];
+  sample: {
+    row: number;
+    timestamp: string;
+    asset?: string;
+    amount?: string;
+    valueUsd?: string;
+    classification: string | null;
+    needsReview: boolean;
+  }[];
+  warnings: string[];
+};
+
+function parseCsv(text: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] || ""])));
+}
+
+function ExchangeCsvImportDialog({ wallets, onDone }: { wallets: WalletType[]; onDone: () => void }) {
+  const { toast } = useToast();
+  const [source, setSource] = useState<CsvSource>("coinbase");
+  const [walletId, setWalletId] = useState(wallets[0]?.id || "");
+  const [rows, setRows] = useState<Record<string, string>[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [preview, setPreview] = useState<CsvPreview | null>(null);
+
+  const selectedWallet = wallets.find(w => w.id === walletId);
+
+  const previewMutation = useMutation({
+    mutationFn: async (payload: { wallet_id: string; source: CsvSource; rows: Record<string, string>[] }) => {
+      const response = await apiRequest("POST", "/api/import/csv/preview", payload);
+      return response.json() as Promise<CsvPreview>;
+    },
+    onSuccess: setPreview,
+    onError: (error: Error) => {
+      toast({ title: "Preview failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async (payload: { wallet_id: string; source: CsvSource; rows: Record<string, string>[] }) => {
+      const response = await apiRequest("POST", "/api/import/csv", payload);
+      return response.json() as Promise<{ imported: number; duplicates: number; needsReview: number }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/work"] });
+      toast({
+        title: "CSV imported",
+        description: `Imported ${data.imported} rows.${data.duplicates ? ` Skipped ${data.duplicates} duplicates.` : ""}${data.needsReview ? ` ${data.needsReview} need review.` : ""}`,
+      });
+      onDone();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Import failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  async function handleFile(file?: File) {
+    setPreview(null);
+    if (!file) return;
+    const text = await file.text();
+    const parsed = parseCsv(text);
+    setRows(parsed);
+    setFileName(file.name);
+    if (parsed.length === 0) {
+      toast({ title: "No rows found", description: "Could not parse this CSV. Check that the first row contains headers.", variant: "destructive" });
+      return;
+    }
+    if (walletId) previewMutation.mutate({ wallet_id: walletId, source, rows: parsed });
+  }
+
+  function refreshPreview(nextSource = source, nextWalletId = walletId) {
+    if (!nextWalletId || rows.length === 0) return;
+    previewMutation.mutate({ wallet_id: nextWalletId, source: nextSource, rows });
+  }
+
+  return (
+    <DialogContent className="max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>Import exchange CSV</DialogTitle>
+        <DialogDescription>
+          Upload Coinbase, Robinhood, or generic exchange activity exports. We preview mapped rows before import and mark ambiguous rows for review.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="rounded-lg border border-amber-500/30 bg-amber-50/80 p-3 text-sm text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+        <div className="flex gap-2">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>CSV imports are draft records only. Verify against your exchange account and official documents before relying on them.</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-2">
+          <Label>Source</Label>
+          <Select value={source} onValueChange={(value: CsvSource) => { setSource(value); refreshPreview(value, walletId); }}>
+            <SelectTrigger data-testid="select-csv-source"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="coinbase">Coinbase</SelectItem>
+              <SelectItem value="robinhood">Robinhood</SelectItem>
+              <SelectItem value="generic">Generic CSV</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Import into wallet/account</Label>
+          <Select value={walletId} onValueChange={(value) => { setWalletId(value); refreshPreview(source, value); }}>
+            <SelectTrigger data-testid="select-import-wallet"><SelectValue placeholder="Select wallet" /></SelectTrigger>
+            <SelectContent>
+              {wallets.map(wallet => (
+                <SelectItem key={wallet.id} value={wallet.id}>{wallet.label || wallet.address.slice(0, 10)} · {wallet.chain}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>CSV file</Label>
+          <Input type="file" accept=".csv,text/csv" onChange={(event) => handleFile(event.target.files?.[0])} data-testid="input-csv-file" />
+        </div>
+      </div>
+
+      {fileName && selectedWallet && (
+        <p className="text-sm text-muted-foreground">
+          Previewing <span className="font-medium">{fileName}</span> into <span className="font-medium">{selectedWallet.label || selectedWallet.address}</span>.
+        </p>
+      )}
+
+      {previewMutation.isPending && <Skeleton className="h-32 w-full" />}
+
+      {preview && (
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-5">
+            <StatMini label="Rows parsed" value={preview.imported} />
+            <StatMini label="Importable" value={preview.importable} />
+            <StatMini label="Duplicates" value={preview.duplicates} />
+            <StatMini label="Needs review" value={preview.needsReview} />
+            <StatMini label="Skipped" value={preview.skipped} />
+          </div>
+
+          {preview.warnings.length > 0 && (
+            <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
+              {preview.warnings.map((warning, index) => <p key={index}>· {warning}</p>)}
+            </div>
+          )}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Preview sample</CardTitle>
+              <CardDescription>First mapped rows. Import keeps uncertain rows flagged for review.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {preview.sample.map(row => (
+                <div key={row.row} className="flex items-center justify-between gap-3 border-b last:border-0 py-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{row.asset || "Unknown asset"} {row.amount ? `· ${row.amount}` : ""}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(row.timestamp).toLocaleString()} · {row.classification || "unknown"}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {row.valueUsd && <Badge variant="outline">${row.valueUsd}</Badge>}
+                    {row.needsReview && <Badge variant="secondary">needs review</Badge>}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {preview.errors.length > 0 && (
+            <details className="text-sm text-muted-foreground">
+              <summary className="cursor-pointer">Skipped row details</summary>
+              <ul className="mt-2 space-y-1">
+                {preview.errors.slice(0, 20).map(error => <li key={`${error.row}-${error.reason}`}>Row {error.row}: {error.reason}</li>)}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onDone}>Cancel</Button>
+        <Button
+          disabled={!preview || preview.importable <= 0 || importMutation.isPending}
+          onClick={() => importMutation.mutate({ wallet_id: walletId, source, rows })}
+          data-testid="button-confirm-csv-import"
+        >
+          {importMutation.isPending ? "Importing..." : "Import rows"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+function StatMini({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-semibold">{value}</p>
     </div>
   );
 }
