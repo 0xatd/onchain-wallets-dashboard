@@ -1,4 +1,4 @@
-# Open Crypto Tax
+# Open Crypto Tax Helper
 
 **Free, self-hosted, AI-agent-friendly crypto records organizer.**
 

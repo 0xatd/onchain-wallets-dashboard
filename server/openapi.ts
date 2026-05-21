@@ -4,7 +4,7 @@
 export const openApiSpec = {
   openapi: "3.1.0",
   info: {
-    title: "Open Crypto Tax",
+    title: "Open Crypto Tax Helper",
     version: "1.0.0",
     description:
       "Self-hosted, FOSS crypto records organizer. AI agents connect via API tokens, propose fixes (cost basis, classification), and a human approves. Every change is audited. Informational software only; not tax, legal, accounting, investment, financial, or compliance advice.",

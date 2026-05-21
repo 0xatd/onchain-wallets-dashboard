@@ -451,7 +451,7 @@ export async function registerRoutes(
 
       res.json({
         verificationCode,
-        instructions: "Send this code to the Open Crypto Tax bot on Telegram to verify your account."
+        instructions: "Send this code to the Open Crypto Tax Helper bot on Telegram to verify your account."
       });
     } catch (error) {
       console.error("Error creating Telegram link:", error);
@@ -505,7 +505,7 @@ export async function registerRoutes(
           await sendVerificationSuccess(parsed.chatId);
           await sendWelcomeMessage(parsed.chatId);
         } else {
-          await sendMessage(parsed.chatId, "Invalid or expired verification code. Please generate a new one from the Open Crypto Tax app.");
+          await sendMessage(parsed.chatId, "Invalid or expired verification code. Please generate a new one from the Open Crypto Tax Helper app.");
         }
       }
       
@@ -534,7 +534,7 @@ export async function registerRoutes(
           if (parsed.command === "status" || parsed.command === "start") {
             const stats = await storage.getDashboardStats(link.userId);
             await sendMessage(parsed.chatId, 
-              `<b>Your Open Crypto Tax Status</b>
+              `<b>Your Open Crypto Tax Helper Status</b>
 
 ` +
               `Wallets: ${stats.totalWallets}
@@ -547,7 +547,7 @@ export async function registerRoutes(
           }
           if (parsed.command === "help") {
             await sendMessage(parsed.chatId,
-              `<b>Open Crypto Tax Commands</b>
+              `<b>Open Crypto Tax Helper Commands</b>
 
 ` +
               `<code>status</code> - Show your stats

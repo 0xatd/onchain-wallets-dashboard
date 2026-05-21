@@ -80,7 +80,7 @@ export function AppSidebar() {
             <Receipt className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">Open Crypto Tax</span>
+            <span className="text-sm font-semibold">Open Crypto Tax Helper</span>
             <span className="text-xs text-muted-foreground">Self-hosted · MIT</span>
           </div>
         </div>

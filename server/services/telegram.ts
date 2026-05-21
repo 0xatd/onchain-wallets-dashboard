@@ -99,7 +99,7 @@ Or reply: <code>classify ${transaction.id} [type]</code>
 
 export async function sendWelcomeMessage(chatId: string): Promise<boolean> {
   const message = `
-<b>Welcome to Open Crypto Tax</b>
+<b>Welcome to Open Crypto Tax Helper</b>
 
 Your Telegram account is now linked. You'll receive notifications when:
 

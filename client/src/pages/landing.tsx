@@ -75,7 +75,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
               <Receipt className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">Open Crypto Tax</span>
+            <span className="text-xl font-bold">Open Crypto Tax Helper</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
@@ -95,7 +95,7 @@ export default function LandingPage() {
             MIT-licensed · Self-hosted · Agent-friendly
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-headline">
-            Open-source crypto records tool
+            Open-source crypto tax helper
             <br />
             for you, your AI agent, and your accountant
           </h1>
@@ -193,7 +193,7 @@ export default function LandingPage() {
         </section>
 
         <footer className="text-center text-sm text-muted-foreground py-8">
-          <p>Open Crypto Tax · MIT-licensed · Informational software only · Not tax, legal, accounting, investment, financial, or compliance advice.</p>
+          <p>Open Crypto Tax Helper · MIT-licensed · Informational software only · Not tax, legal, accounting, investment, financial, or compliance advice.</p>
         </footer>
       </div>
     </div>

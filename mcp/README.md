@@ -1,6 +1,6 @@
 # open-crypto-tax-mcp
 
-MCP server for [Open Crypto Tax](../README.md). Lets AI agents (Claude Desktop, Claude Code, or any MCP-compatible client) read your crypto wallets/transactions and **propose** cost-basis fixes, classifications, and transfer pairings — which you approve in-app before anything mutates.
+MCP server for [Open Crypto Tax Helper](../README.md). Lets AI agents (Claude Desktop, Claude Code, or any MCP-compatible client) read your crypto wallets/transactions and **propose** cost-basis fixes, classifications, and transfer pairings — which you approve in-app before anything mutates.
 
 ## Install
 
@@ -14,7 +14,7 @@ npm run build
 
 You need:
 
-1. A running Open Crypto Tax instance (default `http://localhost:5000`).
+1. A running Open Crypto Tax Helper instance (default `http://localhost:5000`).
 2. An API token. Create one in the app at **Settings → Agent Tokens**, copy the `octt_…` value.
 
 Set environment variables:
