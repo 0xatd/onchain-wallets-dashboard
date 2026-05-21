@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LegalDisclaimer } from "@/components/legal-disclaimer";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Wallet,
@@ -32,8 +33,8 @@ const features = [
   },
   {
     icon: FileText,
-    title: "Tax-ready output",
-    description: "Form 8949, Schedule D, income reports. Export structured JSON for your accountant or your favorite tax LLM workflow."
+    title: "Review-ready exports",
+    description: "Draft worksheets, income summaries, audit trail, and structured JSON for your own review or a qualified tax professional."
   }
 ];
 
@@ -43,9 +44,9 @@ const supportedChains = [
 ];
 
 const reportTypes = [
-  "Form 8949 (Capital Gains)",
-  "Schedule D Summary",
-  "Income Report",
+  "Draft Form 8949 worksheet",
+  "Draft Schedule D summary",
+  "Income summary worksheet",
   "JSON Export (agents)",
   "Audit Log",
   "Missing Cost Basis Queue"
@@ -94,13 +95,16 @@ export default function LandingPage() {
             MIT-licensed · Self-hosted · Agent-friendly
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-headline">
-            Free crypto tax tool
+            Open-source crypto records tool
             <br />
-            for you and your AI agent
+            for you, your AI agent, and your accountant
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8" data-testid="text-subheadline">
-            Self-host. Connect your wallets. Let Claude (or any AI agent) work the missing-cost-basis queue and propose fixes — you approve in one click. Hand the clean dataset to any LLM to finish your taxes.
+            Self-host. Connect read-only wallets. Let Claude (or any AI agent) help organize missing-cost-basis data and propose fixes — you approve in one click. Use the cleaned dataset as a review aid, not a substitute for professional tax advice.
           </p>
+          <div className="max-w-3xl mx-auto mb-8">
+            <LegalDisclaimer compact />
+          </div>
           <div className="flex gap-4 justify-center">
             <Button size="lg" onClick={handleLogin} data-testid="button-get-started">
               {isLocalMode ? "Open app" : "Get started — free"}
@@ -159,7 +163,7 @@ export default function LandingPage() {
                 What you get out
               </CardTitle>
               <CardDescription>
-                Designed for humans, accountants, and AI agents.
+                Draft outputs for review workflows. Not official forms or filing advice.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -177,10 +181,10 @@ export default function LandingPage() {
 
         <section className="text-center py-12 border-t">
           <h2 className="text-2xl font-bold mb-4" data-testid="text-cta-heading">
-            Point Claude at your wallets. Watch your basis problems disappear.
+            Point Claude at your wallets. Turn messy records into reviewable evidence.
           </h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            The MCP server lets your AI agent read your transactions and propose cost-basis fixes with evidence. You approve. Done.
+            The MCP server lets your AI agent read your transactions and propose cost-basis fixes with evidence. You approve, verify, and decide what to share with a professional.
           </p>
           <Button size="lg" onClick={handleLogin} data-testid="button-cta-login">
             {isLocalMode ? "Open app" : "Get started"}
@@ -189,7 +193,7 @@ export default function LandingPage() {
         </section>
 
         <footer className="text-center text-sm text-muted-foreground py-8">
-          <p>Open Crypto Tax · MIT-licensed · Built for self-hosting and AI workflows.</p>
+          <p>Open Crypto Tax · MIT-licensed · Informational software only · Not tax, legal, accounting, investment, financial, or compliance advice.</p>
         </footer>
       </div>
     </div>

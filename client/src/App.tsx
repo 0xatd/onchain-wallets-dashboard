@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { LegalDisclaimer } from "@/components/legal-disclaimer";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,9 @@ function AuthenticatedApp() {
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
+            <div className="mb-6">
+              <LegalDisclaimer compact />
+            </div>
             <Router />
           </main>
         </div>

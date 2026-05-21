@@ -83,7 +83,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your crypto tax status for 2024
+            Overview of your onchain records review for 2024
           </p>
         </div>
         <Link href="/wallets">
@@ -141,7 +141,7 @@ export default function Dashboard() {
                 {formatCurrency(stats?.realizedGains ?? "0")}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Tax Year 2024</p>
+            <p className="text-xs text-muted-foreground mt-1">Draft · 2024</p>
           </CardContent>
         </Card>
 
@@ -160,7 +160,7 @@ export default function Dashboard() {
                 {formatCurrency(stats?.realizedLosses ?? "0")}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Tax Year 2024</p>
+            <p className="text-xs text-muted-foreground mt-1">Draft · 2024</p>
           </CardContent>
         </Card>
       </div>

@@ -1,8 +1,10 @@
 # Open Crypto Tax
 
-**Free, self-hosted, AI-agent-friendly crypto tax aggregator.**
+**Free, self-hosted, AI-agent-friendly crypto records organizer.**
 
-Connect your wallets, fix the missing-cost-basis problem, and hand a clean, structured dataset to your favorite AI agent (Claude, etc.) to finish your taxes.
+Connect your wallets, fix the missing-cost-basis problem, and produce a clean, structured dataset for your own review, your AI agent, or a qualified tax professional.
+
+> **Important:** This is informational software only. It is not tax, legal, accounting, investment, financial, or compliance advice; it does not determine filing obligations; and exports are draft worksheets, not official tax forms. Verify everything with a qualified professional before filing or making decisions.
 
 > Originally built to find missing cost basis in my own taxes. Saved me a lot of money when I handed it to Claude to review. Open-sourcing it so you can do the same.
 
@@ -10,7 +12,7 @@ Connect your wallets, fix the missing-cost-basis problem, and hand a clean, stru
 - 🔎 **Find** every disposal where cost basis is unknown — the headline workflow.
 - 🕵️ **Discover forgotten wallets** by analyzing counterparties across your existing transactions. Bidirectional flow + multi-chain presence + repeated interaction = a wallet you probably own and forgot. Adding one usually unlocks a stack of missing-basis problems at once.
 - 🤖 **Agent-native**: an MCP server + REST API + JSON export. Claude proposes fixes; you approve in-app.
-- 🧾 **Tax-ready**: Form 8949, Schedule D, income reports, plus a structured JSON export your accountant or LLM can parse.
+- 🧾 **Review-ready**: draft Form 8949/Schedule D-style worksheets, income summaries, plus a structured JSON export your accountant or LLM can parse.
 - 🔒 **Self-hosted**: read-only wallet tracking. Your keys never leave your wallet. MIT-licensed.
 
 ---
@@ -98,7 +100,7 @@ Everything is environment-variable driven. See `.env.example` for the full list.
 - A `proposals` row is created with `actor`, `action`, `payload`, `reasoning`, `confidence`, and `evidence_url`.
 - You approve or reject on the **Agent Proposals** page (or auto-approve fires if the token is configured for it and confidence ≥ threshold).
 - Approval applies the change and writes a row to the append-only `audit_log`.
-- Every cost basis your agent fills in carries `basis_source`, `basis_evidence_url`, `basis_set_by` — so you (and your accountant, and the IRS if it ever comes to that) can trace where the number came from.
+- Every cost basis your agent fills in carries `basis_source`, `basis_evidence_url`, `basis_set_by` — so you and your accountant can trace where the number came from.
 
 ---
 

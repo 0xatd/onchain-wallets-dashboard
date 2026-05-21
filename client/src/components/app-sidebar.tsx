@@ -58,7 +58,7 @@ const configItems = [
     icon: Settings2,
   },
   {
-    title: "Reports",
+    title: "Review Exports",
     url: "/reports",
     icon: FileText,
   },
@@ -135,7 +135,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Shield className="h-4 w-4" />
-          <span>Read-only connections only</span>
+          <span>Read-only · informational only</span>
         </div>
       </SidebarFooter>
     </Sidebar>

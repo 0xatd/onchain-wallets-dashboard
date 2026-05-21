@@ -7,7 +7,7 @@ export const openApiSpec = {
     title: "Open Crypto Tax",
     version: "1.0.0",
     description:
-      "Self-hosted, FOSS crypto tax aggregator. AI agents connect via API tokens, propose fixes (cost basis, classification), and a human approves. Every change is audited.",
+      "Self-hosted, FOSS crypto records organizer. AI agents connect via API tokens, propose fixes (cost basis, classification), and a human approves. Every change is audited. Informational software only; not tax, legal, accounting, investment, financial, or compliance advice.",
     license: { name: "MIT" },
   },
   servers: [{ url: "/", description: "Self-hosted instance" }],

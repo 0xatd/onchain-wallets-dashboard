@@ -99,7 +99,7 @@ Or reply: <code>classify ${transaction.id} [type]</code>
 
 export async function sendWelcomeMessage(chatId: string): Promise<boolean> {
   const message = `
-<b>Welcome to CryptoTax Pro!</b>
+<b>Welcome to Open Crypto Tax</b>
 
 Your Telegram account is now linked. You'll receive notifications when:
 
@@ -111,7 +111,7 @@ Your Telegram account is now linked. You'll receive notifications when:
 • Use <code>classify [txId] [type]</code> to classify a specific transaction
 • Use <code>status</code> to see pending review count
 
-Stay on top of your crypto taxes!
+Informational tool only — not tax, legal, accounting, investment, financial, or compliance advice. Verify records with a qualified professional before filing or making decisions.
   `.trim();
 
   return sendMessage(chatId, message, { parseMode: "HTML" });

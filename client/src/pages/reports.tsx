@@ -54,43 +54,43 @@ function formatCurrency(value: string | number | null): string {
 const reports = [
   {
     id: "form8949",
-    title: "Form 8949",
-    description: "Sales and Other Dispositions of Capital Assets",
+    title: "Draft Form 8949 Worksheet",
+    description: "Review worksheet for potential sales and disposals. Not an official IRS form.",
     icon: FileText,
-    format: "PDF / CSV",
+    format: "CSV",
   },
   {
     id: "schedule-d",
-    title: "Schedule D",
-    description: "Capital Gains and Losses Summary",
+    title: "Draft Schedule D Summary",
+    description: "Review summary of calculated gains and losses. Verify before filing.",
     icon: DollarSign,
-    format: "PDF",
+    format: "CSV",
   },
   {
     id: "income",
-    title: "Income Report",
-    description: "Airdrops, staking rewards, and other income",
+    title: "Income Worksheet",
+    description: "Draft summary of airdrops, staking rewards, and other income-like activity.",
     icon: Coins,
     format: "CSV",
   },
   {
     id: "staking",
-    title: "Staking Report",
-    description: "Detailed staking rewards breakdown",
+    title: "Staking Worksheet",
+    description: "Draft staking rewards breakdown for review.",
     icon: TrendingUp,
     format: "CSV",
   },
   {
     id: "airdrop",
-    title: "Airdrop Report",
-    description: "All received airdrops and their values",
+    title: "Airdrop Worksheet",
+    description: "Draft list of received airdrops and observed values.",
     icon: Gift,
     format: "CSV",
   },
   {
     id: "nft",
-    title: "NFT Report",
-    description: "NFT purchases, sales, and mints",
+    title: "NFT Worksheet",
+    description: "Draft list of NFT purchases, sales, and mints.",
     icon: ImageIcon,
     format: "CSV",
   },
@@ -200,9 +200,9 @@ export default function Reports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tax Reports</h1>
+          <h1 className="text-2xl font-bold">Review Exports</h1>
           <p className="text-muted-foreground">
-            Generate and download your tax reports
+            Generate draft worksheets for review. These are not official forms or professional advice.
           </p>
         </div>
         <Select value={taxYear.toString()} onValueChange={(v) => setTaxYear(parseInt(v))}>
@@ -227,7 +227,7 @@ export default function Reports() {
             <div className="flex-1">
               <p className="font-medium">Some transactions need review</p>
               <p className="text-sm text-muted-foreground">
-                {summary.needsReviewCount} transactions require classification before generating accurate reports.
+                {summary.needsReviewCount} transactions require review before exports can be considered complete.
               </p>
             </div>
             <Button variant="outline" asChild>
@@ -242,9 +242,9 @@ export default function Reports() {
               <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1">
-              <p className="font-medium">All transactions classified</p>
+              <p className="font-medium">No open classification flags</p>
               <p className="text-sm text-muted-foreground">
-                Your reports are ready to download.
+                Draft exports are available. Verify the data before using it anywhere else.
               </p>
             </div>
           </CardContent>
@@ -313,7 +313,7 @@ export default function Reports() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Disposals
+              Disposal Candidates
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -324,13 +324,13 @@ export default function Reports() {
                 {summary?.totalDisposals ?? 0}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Taxable events</p>
+            <p className="text-xs text-muted-foreground mt-1">Review needed</p>
           </CardContent>
         </Card>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold mb-4">Available Reports</h2>
+        <h2 className="text-lg font-semibold mb-4">Available Draft Exports</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {reports.map((report) => (
             <ReportCard 
@@ -347,7 +347,7 @@ export default function Reports() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Recent Disposals</CardTitle>
-            <CardDescription>Preview of your capital gains and losses</CardDescription>
+            <CardDescription>Preview of calculated disposal candidates. Verify before relying on these numbers.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>

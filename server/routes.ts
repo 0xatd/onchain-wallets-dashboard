@@ -330,13 +330,15 @@ export async function registerRoutes(
       
       const summary = await storage.getReportSummary(year, userId);
 
-      // Generate CSV content based on report type
-      let csvContent = "";
+      // Generate CSV content based on report type. Exports are draft worksheets,
+      // not official tax forms or professional tax/legal/accounting advice.
+      const disclaimer = '"NOTICE","Draft worksheet only. This export is informational software output, not tax, legal, accounting, investment, financial, or compliance advice. Verify with a qualified professional before filing or making decisions."\n';
+      let csvContent = disclaimer;
       let filename = "";
 
       switch (reportId) {
         case "form8949":
-          csvContent = "Description,Date Acquired,Date Sold,Proceeds,Cost Basis,Gain or Loss\n";
+          csvContent += "Description,Date Acquired,Date Sold,Proceeds,Cost Basis,Gain or Loss\n";
           for (const d of summary.disposals) {
             csvContent += `"${d.tokenSymbol}",` +
               `"${new Date(d.disposedAt).toISOString().split('T')[0]}",` +
@@ -349,19 +351,19 @@ export async function registerRoutes(
           break;
 
         case "schedule-d":
-          csvContent = "Category,Short-Term Gain,Short-Term Loss,Long-Term Gain,Long-Term Loss,Net\n";
+          csvContent += "Category,Short-Term Gain,Short-Term Loss,Long-Term Gain,Long-Term Loss,Net\n";
           csvContent += `"Summary",${summary.shortTermGains},${summary.shortTermLosses},${summary.longTermGains},${summary.longTermLosses},${summary.netGainLoss}\n`;
           filename = `schedule-d-${year}.csv`;
           break;
 
         case "income":
-          csvContent = "Type,Amount USD\n";
+          csvContent += "Type,Amount USD\n";
           csvContent += `"Total Income",${summary.totalIncome}\n`;
           filename = `income-report-${year}.csv`;
           break;
 
         default:
-          csvContent = "Report Type,Data\n";
+          csvContent += "Report Type,Data\n";
           csvContent += `"${reportId}","Generated for ${year}"\n`;
           filename = `${reportId}-${year}.csv`;
       }

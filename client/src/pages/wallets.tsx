@@ -388,7 +388,7 @@ export default function Wallets() {
             </div>
             <h3 className="text-lg font-semibold mb-1">No wallets connected</h3>
             <p className="text-muted-foreground text-center max-w-sm mb-4">
-              Add your first wallet to start importing transaction history and calculating your taxes.
+              Add your first wallet to start importing transaction history and organizing your onchain records.
             </p>
             <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-first-wallet">
               <PlusCircle className="h-4 w-4 mr-2" />
