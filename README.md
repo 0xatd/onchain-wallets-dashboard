@@ -1,12 +1,8 @@
 # Open Crypto Tax Helper
 
-## What this is
+A self-hosted wallet and transaction organizer for investigating missing acquisition records and preparing data for review.
 
-Open Crypto Tax Helper is a self-hosted wallet/transaction records organizer for crypto tax review. It helps find missing cost basis, organize transactions, and expose structured data to AI agents or tax professionals.
-
-It is informational software only. It is not tax, legal, accounting, investment, or compliance advice.
-
-Status: standalone open-source utility, separate from CheapTokens and other payments products.
+**Public source snapshot.** More recent private reconciliation work is not included in this repository. Features below describe this public version, not the private build. [Project background](https://github.com/0xatd/0xatd/blob/main/projects/crypto-records.md).
 
 **Free, self-hosted, AI-agent-friendly crypto records organizer.**
 
@@ -14,11 +10,11 @@ Connect your wallets, fix the missing-cost-basis problem, and produce a clean, s
 
 > **Important:** This is informational software only. It is not tax, legal, accounting, investment, financial, or compliance advice; it does not determine filing obligations; and exports are draft worksheets, not official tax forms. Verify everything with a qualified professional before filing or making decisions.
 
-> Originally built to find missing cost basis in my own taxes. Saved me a lot of money when I handed it to Claude to review. Open-sourcing it so you can do the same.
+> Built to investigate missing acquisition history. Missing costs remain unknown until supported by records; a historical market price alone does not establish original cost basis.
 
 - 🪙 **Aggregate** wallets across Ethereum, Bitcoin, Solana, Polygon, Arbitrum, Optimism, Base, Avalanche, BSC.
 - 🔎 **Find** every disposal where cost basis is unknown — the headline workflow.
-- 🕵️ **Discover forgotten wallets** by analyzing counterparties across your existing transactions. Bidirectional flow + multi-chain presence + repeated interaction = a wallet you probably own and forgot. Adding one usually unlocks a stack of missing-basis problems at once.
+- 🕵️ **Discover forgotten wallets** by analyzing counterparties across your existing transactions. Counterparty patterns identify candidates to investigate; they do not establish ownership. Confirm ownership before including another account.
 - 🤖 **Agent-native**: an MCP server + REST API + JSON export. Claude proposes fixes; you approve in-app.
 - 🧾 **Review-ready**: draft Form 8949/Schedule D-style worksheets, income summaries, plus a structured JSON export your accountant or LLM can parse.
 - 🔒 **Self-hosted**: read-only wallet tracking. Your keys never leave your wallet. MIT-licensed.
@@ -30,7 +26,7 @@ Connect your wallets, fix the missing-cost-basis problem, and produce a clean, s
 The fastest path is local-auth mode (single user, no Google Cloud setup).
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/0xatd/onchain-wallets-dashboard.git
 cd onchain-wallets-dashboard
 cp .env.example .env       # then edit DATABASE_URL etc.
 docker compose up          # starts Postgres + the app at http://localhost:5000
@@ -59,7 +55,7 @@ Then visit http://localhost:5000. You're already "logged in" as the local user. 
    }
    ```
 
-4. In Claude, ask: *"What transactions are missing cost basis? Look up historical prices and propose fixes."* Claude reads your data via the MCP tools and submits proposals. Approve them on the **Agent Proposals** page.
+4. In Claude, ask: *"What transactions are missing cost basis? Trace the original purchases and transfers, and propose evidence-backed fixes."* Claude reads your data via the MCP tools and submits proposals. Approve them on the **Agent Proposals** page.
 
 ---
 
