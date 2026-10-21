@@ -2,7 +2,7 @@
 
 A self-hosted wallet and transaction organizer for investigating missing acquisition records and preparing data for review.
 
-**Public source snapshot.** More recent private reconciliation work is not included in this repository. Features below describe this public version, not the private build. [Project background](https://github.com/0xatd/0xatd/blob/main/projects/crypto-records.md).
+**Earlier open-source version.** Current reconciliation development is private. [Project background](https://github.com/0xatd/0xatd/blob/main/projects/crypto-records.md).
 
 **Free, self-hosted, AI-agent-friendly crypto records organizer.**
 
