@@ -1,12 +1,18 @@
 # Open Crypto Tax Helper
 
-A self-hosted wallet and transaction organizer for investigating missing acquisition records and preparing data for review.
+Self-hosted crypto accounting software for tracing transactions, investigating missing cost basis, and finding forgotten wallets with software and AI.
 
-**Earlier open-source version.** Current reconciliation development is private. [Project background](https://github.com/0xatd/0xatd/blob/main/projects/crypto-records.md).
+## Why I’m building it
 
-**Free, self-hosted, AI-agent-friendly crypto records organizer.**
+Every year I spend around $1,000 on crypto tax accounting and still end up fixing errors and tracking down missing records myself. I want to make it much cheaper and easier for anyone to reconstruct their onchain history and prepare their tax records.
 
-Connect your wallets, fix the missing-cost-basis problem, and produce a clean, structured dataset for your own review, your AI agent, or a qualified tax professional.
+The goal: start with your main wallet address and reconstruct your financial history across the accounts you own. Software handles the routine tracing; AI helps investigate unresolved cases, with ownership confirmed before another wallet is included.
+
+**This repository contains an earlier open-source version.** Current reconciliation development is private. I plan to open-source the full system and eventually offer a hosted service for saving records and keeping them up to date. [Project background](https://github.com/0xatd/0xatd/blob/main/projects/crypto-records.md).
+
+## What’s available here
+
+Connect wallets, investigate missing acquisition records, and export a structured dataset for your own review, an AI agent, or a tax professional.
 
 > **Important:** This is informational software only. It is not tax, legal, accounting, investment, financial, or compliance advice; it does not determine filing obligations; and exports are draft worksheets, not official tax forms. Verify everything with a qualified professional before filing or making decisions.
 
